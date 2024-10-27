@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -43,6 +44,8 @@ class ProductController extends Controller
                 "status" => "success",
                 "data" => $product
             ], 201);
+
+
         } catch (QueryException $e) {
             if ($e->getCode() === "23000") {
                 return response()->json([
@@ -57,17 +60,25 @@ class ProductController extends Controller
             ], 500);
         }
     }
-    function getAllProducts()
+    function getAllProducts(Request $request)
     {
-        $products = Product::with("category")->with("subcategory")->get();
 
-        if (!$products) {
+        $query = $request->query();
+        $products = Product::with(["category", "subcategory"]);
+
+        if (!empty($query['name'])) {
+            $products->where("name", "like", "%" . $query['name'] . "%");
+        }
+
+        $products = $products->get();
+
+        if ($products->isEmpty()) {
             return response()->json([
                 "status" => "failed",
-                "message" => "something went wrong"
+                "message" => "No products found"
             ]);
         }
-        
+
         return response()->json([
             "status" => "success",
             "data" => $products
@@ -94,6 +105,10 @@ class ProductController extends Controller
             ]);
 
             if ($request->hasFile("images")) {
+                if ($product->images) {
+                    $oldImages = $product->images;
+                    Storage::disk("public")->delete($oldImages);
+                }
                 $imagePaths = uploadFile($request->file("images"), "products");
                 $validated['images'] = json_encode($imagePaths);
             }
@@ -128,6 +143,11 @@ class ProductController extends Controller
                 "status" => "error",
                 "message" => "Product not found"
             ], 404);
+        }
+
+        if ($product->images) {
+            $oldImages = $product->images;
+            Storage::disk("public")->delete($oldImages);
         }
 
         $product->delete();

@@ -42,10 +42,30 @@ class CategoryController extends Controller
         }
     }
 
-    function getAllCategories()
+    function getAllCategories(Request $request)
     {
-        $categories = Category::with("subcategory")->whereNull("parent_id")->get();
-        return response()->json($categories);
+        $query = $request->query();
+
+        $categories = Category::with("subcategory")
+            ->whereNull("parent_id");
+
+        if (!empty($query['name'])) {
+            $categories->where("name", "like", "%" . $query['name'] . "%");
+        }
+
+        $categories = $categories->get();
+
+        if ($categories->isEmpty()) {
+            return response()->json([
+                "status" => "failed",
+                "message" => "No categories found"
+            ], 404);
+        }
+
+        return response()->json([
+            "status" => "success",
+            "data" => $categories
+        ], 200);
     }
     function updateCategory($id, Request $request)
     {
@@ -67,8 +87,11 @@ class CategoryController extends Controller
             ]);
 
             if ($request->hasFile("image")) {
-                # code...
-                $path = uploadFile($request->file("image"), "catgory");
+                if ($category->image && file_exists(public_path("storage/" . $category->image))) {
+                    unlink(public_path("storage/" . $category->image));
+                }
+                // return dd($category->image && file_exists(public_path("storage/catgory/" . $category->image)));
+                $path = uploadFile($request->file("image"), "category");
                 $validated["image"] = $path;
             }
 
@@ -102,6 +125,10 @@ class CategoryController extends Controller
                 "status" => "error",
                 "message" => "category not found"
             ], 404);
+        }
+
+        if ($category->image && file_exists(public_path("storage/".$category->image))) {
+            unlink(public_path("storage/".$category->image));
         }
 
         $category->delete();

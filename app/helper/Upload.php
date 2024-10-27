@@ -11,8 +11,8 @@ if (!function_exists('uploadFile')) {
 
 		foreach ($imagesArray as $image) {
 			$imageName = time() . '-' . uniqid() . '.' . $image->getClientOriginalExtension();
-			$path = $image->storeAs("products", $imageName, 'public');
-			$imagesPath[] = str_replace("products/", "", $path);
+			$path = $image->storeAs($folder, $imageName, 'public');
+			$imagesPath[] = $path;
 		}
 
 		return $isMultiple ? $imagesPath : $imagesPath[0];
