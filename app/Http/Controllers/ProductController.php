@@ -20,8 +20,11 @@ class ProductController extends Controller
                 "subcategory_id" => "numeric",
                 'images' => 'array',
                 'images.*' => 'image',
+                'banner' => 'image',
+                'short_desc' => 'min:3',
+                'long_desc' => 'min:3',
             ]);
-
+// when got stop product creating
             $product = Product::create([
                 "name" => $validated["name"],
                 "price" => $validated["price"],

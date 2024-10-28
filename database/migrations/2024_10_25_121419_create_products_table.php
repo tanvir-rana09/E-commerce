@@ -17,7 +17,14 @@ return new class extends Migration
             $table->string("slug");
             $table->decimal("price");
             $table->integer("quantity");
-            $table->json("images");
+            $table->text('banner')->nullable();
+            $table->text('images')->nullable();
+            $table->text('short_desc')->nullable();
+            $table->text('long_desc')->nullable();
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->unsignedBigInteger('subcategory_id')->nullable();
+            $table->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
+            $table->foreign('subcategory_id')->references('id')->on('categories')->onDelete('cascade');
             $table->index("name");
             $table->timestamps();
         });
