@@ -1,9 +1,10 @@
 <?php
 
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 
@@ -31,3 +32,20 @@ Route::middleware(["auth:api"])->prefix("category")->group(function () {
     Route::put("/update/{id}", [CategoryController::class, "updateCategory"]);
     Route::delete("/delete/{id}", [CategoryController::class, "deleteCategory"]);
 });
+
+// category blog operation route
+Route::middleware(["auth:api"])->prefix("blog")->group(function () {
+    Route::get("/", [BlogController::class, "getAllBlogs"]);
+    Route::post("/add", [BlogController::class, "addBlog"]);
+    Route::put("/update/{id}", [BlogController::class, "updateBlog"]);
+    Route::delete("/delete/{id}", [BlogController::class, "deleteBlog"]);
+});
+
+// category blog operation route
+Route::middleware(["auth:api"])->prefix("comment")->group(function () {
+    Route::get("/", [CommentController::class, "getAllComments"]);
+    Route::post("/add", [CommentController::class, "addComment"]);
+    Route::put("/update/{id}", [CommentController::class, "updateComment"]);
+    Route::delete("/delete/{id}", [CommentController::class, "deleteComment"]);
+});
+

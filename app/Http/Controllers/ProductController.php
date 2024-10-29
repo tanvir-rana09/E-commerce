@@ -24,31 +24,27 @@ class ProductController extends Controller
                 'short_desc' => 'min:3',
                 'long_desc' => 'min:3',
             ]);
-// when got stop product creating
-            $product = Product::create([
-                "name" => $validated["name"],
-                "price" => $validated["price"],
-                "quantity" => $validated["quantity"],
-            ]);
 
             if (!empty($validated["category_id"])) {
-                $product->category_id = $validated["category_id"];
+                $validated['category_id'] = $validated["category_id"];
             }
             if (!empty($validated["subcategory_id"])) {
-                $product->subcategory_id = $validated["subcategory_id"];
+                $validated['subcategory_id'] = $validated["subcategory_id"];
             }
 
             $requestImages = $request->file("images");
+            $requestBanner = $request->file("banner");
             $imagePath = uploadFile($requestImages, "products");
-            $product->images = json_encode($imagePath);
-            $product->save();
+            $bannerPath = uploadFile($requestBanner, "products");
+            $validated['images'] = json_encode($imagePath);
+            $validated['banner'] = $bannerPath;
+
+            $product = Product::create($validated);
 
             return response()->json([
                 "status" => "success",
                 "data" => $product
             ], 201);
-
-
         } catch (QueryException $e) {
             if ($e->getCode() === "23000") {
                 return response()->json([
@@ -67,7 +63,7 @@ class ProductController extends Controller
     {
 
         $query = $request->query();
-        $products = Product::with(["category", "subcategory"]);
+        $products = Product::with(["category", "subcategory","comment"]);
 
         if (!empty($query['name'])) {
             $products->where("name", "like", "%" . $query['name'] . "%");
@@ -105,6 +101,9 @@ class ProductController extends Controller
                 "subcategory_id" => "sometimes|numeric",
                 'images' => 'sometimes|array',
                 'images.*' => 'image',
+                'banner' => 'image|sometimes',
+                'short_desc' => 'min:3|sometimes',
+                'long_desc' => 'min:3|sometimes',
             ]);
 
             if ($request->hasFile("images")) {
@@ -114,6 +113,14 @@ class ProductController extends Controller
                 }
                 $imagePaths = uploadFile($request->file("images"), "products");
                 $validated['images'] = json_encode($imagePaths);
+            }
+            if ($request->hasFile("banner")) {
+                if ($product->banner) {
+                    $oldImages = $product->banner;
+                    Storage::disk("public")->delete($oldImages);
+                }
+                $imagePaths = uploadFile($request->file("banner"), "products");
+                $validated['banner'] = $imagePaths;
             }
 
             $product->update($validated);
