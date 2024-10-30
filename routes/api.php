@@ -4,6 +4,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SliderController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -47,5 +48,13 @@ Route::middleware(["auth:api"])->prefix("comment")->group(function () {
     Route::post("/add", [CommentController::class, "addComment"]);
     Route::put("/update/{id}", [CommentController::class, "updateComment"]);
     Route::delete("/delete/{id}", [CommentController::class, "deleteComment"]);
+});
+
+// category blog operation route
+Route::middleware(["auth:api"])->prefix("slider")->group(function () {
+    Route::get("/", [SliderController::class, "getAllSliders"]);
+    Route::post("/add", [SliderController::class, "addSlider"]);
+    Route::put("/update/{id}", [SliderController::class, "updateSlider"]);
+    Route::delete("/delete/{id}", [SliderController::class, "deleteSlider"]);
 });
 

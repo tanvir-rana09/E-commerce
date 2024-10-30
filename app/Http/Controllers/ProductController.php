@@ -11,6 +11,7 @@ class ProductController extends Controller
 {
     function addProduct(Request $request)
     {
+
         try {
             $validated = $request->validate([
                 "name" => "required|min:3",
@@ -63,7 +64,7 @@ class ProductController extends Controller
     {
 
         $query = $request->query();
-        $products = Product::with(["category", "subcategory","comment"]);
+        $products = Product::with(["category", "subcategory"]);
 
         if (!empty($query['name'])) {
             $products->where("name", "like", "%" . $query['name'] . "%");
