@@ -11,30 +11,25 @@ class SliderController extends Controller
     // Add a new slider with file(s) upload based on the page type
     public function addSlider(Request $request)
     {
-      
+
         $validatedData = $request->validate([
             'page' => 'required|string|max:255',
             'files' => 'array',
-            // 'files.*' => 'required_if:page,home|image|mimes:jpg,jpeg,png,webp|max:2048',
-            // 'files' => 'required_unless:page,home|mimes:mp4,avi,mov|max:10240'
         ]);
- 
-        if ($request->page === 'home' && $request->hasFile('files')) {
-            $validatedData['files'] = uploadFile($request->file('files'), 'slider/image');
-        } else {
-            foreach ($request->file('files') as $file) {
-                # code...
-                // return $file;
-                $file = $request->file('files')[0];
-                $validatedData['files'] = $file->store('videos', 'public');
-            }
+        
+        $files = $request->file('files', []);
+        $uploadedFiles = [];
+        
+        foreach ($files as $file) {
+            $folder = str_starts_with($file->getMimeType(), "image/") ? 'slider/image' : 'slider/video';
+            $uploadedFiles[] = uploadFile($file, $folder);
         }
-
+        
         $slider = Slider::create([
             'page' => $validatedData['page'],
-            'files' => json_encode($validatedData['files']),
+            'files' => json_encode($uploadedFiles),
         ]);
-
+        
         return response()->json([
             'message' => 'Slider created successfully!',
             'data' => $slider
@@ -69,50 +64,43 @@ class SliderController extends Controller
     // Update a specific slider by ID with new file(s) based on the page type
     public function updateSlider(Request $request, $id)
     {
-        $validatedData = $request->validate([
-            'page' => 'sometimes|string|max:255',
-            'files.*' => 'required_if:page,home|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'file' => 'required_unless:page,home|mimes:mp4,avi,mov|max:10240'
-        ]);
-
         $slider = Slider::findOrFail($id);
-        $filePaths = json_decode($slider->files, true) ?? [];
 
-        // Delete old files if new files are provided
-        if ($request->page === 'home' && $request->hasFile('files')) {
-            foreach ($filePaths as $filePath) {
-                Storage::disk('public')->delete($filePath);
-            }
-            $filePaths = [];
-            foreach ($request->file('files') as $file) {
-                $filePaths[] = uploadFile($file, 'slider/home');
-            }
-        } elseif ($request->hasFile('file')) {
-            if (!empty($filePaths)) {
-                Storage::disk('public')->delete($filePaths[0]); // Delete the single video file
-            }
-            $filePaths = [uploadFile($request->file('file'), 'slider/others')];
+        $validatedData = $request->validate([
+            'page' => 'required|string|max:255',
+            'files' => 'array',
+        ]);
+    
+        $files = $request->file('files', []);
+
+        if ($request->hasFile('files') && $slider->files) {
+            Storage::disk("public")->delete($slider->files);
         }
 
+        $uploadedFiles = $slider->files ?? []; // Keep existing files if no new uploads
+        foreach ($files as $file) {
+            $folder = str_starts_with($file->getMimeType(), "image/") ? 'slider/image' : 'slider/video';
+            $uploadedFiles[] = uploadFile($file, $folder);
+        }
+    
         $slider->update([
-            'page' => $validatedData['page'] ?? $slider->page,
-            'files' => json_encode($filePaths),
+            'page' => $validatedData['page'],
+            'files' => json_encode($uploadedFiles),
         ]);
-
+    
         return response()->json([
             'message' => 'Slider updated successfully!',
             'data' => $slider
-        ]);
+        ], 200);
     }
 
     // Delete a specific slider by ID and all associated files
     public function deleteSlider($id)
     {
         $slider = Slider::findOrFail($id);
-        $filePaths = json_decode($slider->files, true) ?? [];
 
-        foreach ($filePaths as $filePath) {
-            Storage::disk('public')->delete($filePath);
+        if(!empty($slider->files)) {
+            Storage::disk('public')->delete($slider->files);
         }
 
         $slider->delete();

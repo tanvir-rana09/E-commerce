@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id')->nullable();
             $table->unsignedBigInteger('product_id')->nullable();
             $table->text("desc");
-            $table->integer("rating")->min(1)->max(5)->nullable();
+            $table->integer("rating")->min(1)->max(5)->nullable()->default(1);
             $table->timestamps();
         });
     }

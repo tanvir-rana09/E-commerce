@@ -9,14 +9,16 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
+    public $imagePath;
+    public $bannerPath;
     function addProduct(Request $request)
     {
 
         try {
             $validated = $request->validate([
                 "name" => "required|min:3",
-                "price" => "decimal:1|required",
-                "quantity" => "numeric|required",
+                "price" => "numeric|required",
+                "stock" => "numeric|required",
                 "category_id" => "numeric",
                 "subcategory_id" => "numeric",
                 'images' => 'array',
@@ -35,11 +37,10 @@ class ProductController extends Controller
 
             $requestImages = $request->file("images");
             $requestBanner = $request->file("banner");
-            $imagePath = uploadFile($requestImages, "products");
-            $bannerPath = uploadFile($requestBanner, "products");
-            $validated['images'] = json_encode($imagePath);
-            $validated['banner'] = $bannerPath;
-
+            $this->imagePath = uploadFile($requestImages, "products");
+            $this->bannerPath = uploadFile($requestBanner, "products");
+            $validated['images'] = json_encode($this->imagePath);
+            $validated['banner'] = $this->bannerPath;
             $product = Product::create($validated);
 
             return response()->json([
@@ -47,6 +48,14 @@ class ProductController extends Controller
                 "data" => $product
             ], 201);
         } catch (QueryException $e) {
+
+            if ($this->bannerPath || $this->imagePath) {
+                $oldImages = $this->imagePath;
+                $oldBanner = $this->bannerPath;
+                Storage::disk("public")->delete($oldImages);
+                Storage::disk("public")->delete($oldBanner);
+            }
+    
             if ($e->getCode() === "23000") {
                 return response()->json([
                     "status" => "failed",
@@ -56,7 +65,8 @@ class ProductController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Something went wrong. Please try again later.'
+                'message' => 'Something went wrong. Please try again later.',
+                'data' => $e
             ], 500);
         }
     }
@@ -84,6 +94,7 @@ class ProductController extends Controller
             "data" => $products
         ], 200);
     }
+
     function updateProduct($id, Request $request)
     {
         try {
@@ -97,7 +108,7 @@ class ProductController extends Controller
             $validated = $request->validate([
                 "name" => "sometimes|min:3",
                 "price" => "sometimes|numeric|between:0,999999.99",
-                "quantity" => "sometimes|numeric",
+                "stock" => "sometimes|numeric",
                 "category_id" => "sometimes|numeric",
                 "subcategory_id" => "sometimes|numeric",
                 'images' => 'sometimes|array',

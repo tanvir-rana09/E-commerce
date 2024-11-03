@@ -33,14 +33,9 @@ class CommentController extends Controller
             return $query->select("id","name","email");
         }]);
 
-        // Apply filters if parameters are provided
         if (!empty($query['product_id'])) {
             $commentsQuery->where('product_id', $query['product_id']);
         }
-
-        // if (!empty($query['min_rating']) && !empty($query['max_rating'])) {
-        //     $commentsQuery->whereBetween('rating', [(int) $query['min_rating'], (int) $query['max_rating']]);
-        // }
 
         $comments = $commentsQuery->get();
 

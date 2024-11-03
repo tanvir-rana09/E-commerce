@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string("name");
             $table->string("slug");
-            $table->decimal("price");
-            $table->integer("quantity");
+            $table->float("price");
+            $table->unsignedInteger("stock");
             $table->text('banner')->nullable();
             $table->text('images')->nullable();
             $table->text('short_desc')->nullable();

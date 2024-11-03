@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string("name",100);
             $table->string("email")->unique();
             $table->string("password");
-            $table->string("token")->nullable();
+            $table->text("token")->nullable();
             $table->timestamps();
         });
     }

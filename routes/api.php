@@ -4,6 +4,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SliderController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,7 @@ Route::middleware(["auth:api"])->prefix("auth")->group(function () {
 // product crud operation route
 Route::middleware(["auth:api"])->prefix("product")->group(function () {
     Route::get("/", [ProductController::class, "getAllProducts"]);
+    Route::get("/comments/{id}", [ProductController::class, "productComments"]);
     Route::post("/add", [ProductController::class, "addProduct"]);
     Route::put("/update/{id}", [ProductController::class, "updateProduct"]);
     Route::delete("/delete/{id}", [ProductController::class, "deleteProduct"]);
@@ -58,3 +60,10 @@ Route::middleware(["auth:api"])->prefix("slider")->group(function () {
     Route::delete("/delete/{id}", [SliderController::class, "deleteSlider"]);
 });
 
+// category blog operation route
+Route::middleware(["auth:api"])->prefix("section")->group(function () {
+    Route::get("/", [SectionController::class, "getAllSections"]);
+    Route::post("/add", [SectionController::class, "addSection"]);
+    Route::put("/update/{id}", [SectionController::class, "updateSection"]);
+    Route::delete("/delete/{id}", [SectionController::class, "deleteSection"]);
+});
