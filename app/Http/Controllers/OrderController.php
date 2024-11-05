@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderItems;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -27,13 +28,16 @@ class OrderController extends Controller
 				'products.*.product_id' => 'required|exists:products,id',
 				'products.*.quantity' => 'required|integer|min:1',
 				'products.*.price' => 'required|integer|min:0',
-				'total_items' => 'required|integer|min:1', 
+				'total_items' => 'required|integer|min:1',
 				'subtotal' => 'integer|min:0',
 				'total_price' => 'integer|min:0',
 				'discount_amount' => 'integer|min:0',
-				'shipping' => 'integer|min:0',
+				'shipping_cost' => 'integer|min:0',
 				'shipping_address' => 'required|array',
 				'shipping_address.address' => 'required|string|max:255',
+				'shipping_address.name' => 'required|string|max:255',
+				'shipping_address.email' => 'required|email|max:255',
+				'shipping_address.phone' => 'required|string|max:255',
 				'shipping_address.city' => 'required|string|max:100',
 				'shipping_address.division' => 'required|string|max:100',
 				'shipping_address.postal_code' => 'required|string|max:10',
@@ -50,14 +54,30 @@ class OrderController extends Controller
 				return response()->json(['errors' => $validator->errors()], 422);
 			}
 
-			$orderData = $this->orderService->prepareOrder($request);
-
 			DB::beginTransaction();
 
+			$orderData = $this->orderService->prepareOrder($request);
 			$order = Order::create($orderData);
 
-			foreach ($request->products as $product) {
-				$productModel = Product::findOrFail($product['product_id']);
+			foreach ($order->products as $product) {
+				$productModel = Product::find($product['product_id']);
+
+				// Check if enough stock is available
+				if ($productModel->stock < $product['quantity']) {
+					DB::rollBack();
+					return response()->json([
+						'error' => 'Failed to create order',
+						'message' => "Product {$productModel->name} is out of stock"
+					], 404);
+				}
+
+				// Create order item and update stock
+				OrderItems::create([
+					'order_id' => $order->id,
+					'product_id' => $product['product_id'],
+					'quantity' => $product['quantity'],
+					'price' => $productModel['price'],
+				]);
 				$productModel->decrement('stock', $product['quantity']);
 			}
 
@@ -65,31 +85,56 @@ class OrderController extends Controller
 
 			return response()->json(["status" => "success", "data" => $order], 201);
 		} catch (\Exception $e) {
-			// Rollback the transaction if something goes wrong
 			DB::rollBack();
 
-			// Return error response
+			if ($e->getCode() == '22003') {
+				return response()->json(['error' => 'Failed to create order', 'message' => 'Product out of stock'], 404);
+			}
 			return response()->json(['error' => 'Failed to create order', 'message' => $e->getMessage()], 500);
 		}
 	}
 
+	public function orderedItems($id = null)
+	{
+		try {
+			if ($id) {
+				$order = orderItems::with(['product','order'])->where('id', $id)->first();
+				if (!$order) {
+					return response()->json(['message' => 'Ordered items not found'], 404);
+				}
+				return response()->json(['orders' => $order]);
+			}
+			$orders = orderItems::with(['product','order'])->get();
+			return response()->json(['orders' => $orders]);
+		} catch (\Exception $e) {
+			return $e;
+		}
+	}
 
 	public function userOrders($id = null)
 	{
-		$user = Auth::user();
-		if ($id) {
-			$order = Order::where('user_id', $user->id)->where('id', $id)->first();
+		try {
+			$user = Auth::user();
+			if ($id) {
+				$order = Order::with(['orderItems' => function ($query) {
+					$query->select(['id', 'order_id', 'product_id', 'price', 'quantity'])->with('product');
+				}])->where('user_id', $user->id)->where('id', $id)->first();
 
-			if (!$order) {
-				return response()->json(['message' => 'Order not found'], 404);
+				if (!$order) {
+					return response()->json(['message' => 'Order not found '], 404);
+				}
+
+				return response()->json(['order' => $order]);
 			}
 
-			return response()->json(['order' => $order]);
+			$orders = Order::with(['orderItems' => function ($query) {
+				$query->with('product');
+			}])->where('user_id', $user->id)->get();
+
+			return response()->json(['orders' => $orders]);
+		} catch (\Exception $e) {
+			return $e;
 		}
-
-		$orders = Order::where('user_id', $user->id)->get();
-
-		return response()->json(['orders' => $orders]);
 	}
 
 
@@ -99,7 +144,7 @@ class OrderController extends Controller
 		$order = Order::find($id);
 
 		if (!$order) {
-			return response()->json(['message' => 'Order not found'], 404);
+			return response()->json(['message' => 'Order not found '], 404);
 		}
 
 		if ($order->delivery_status === 'delivered') {
@@ -118,6 +163,7 @@ class OrderController extends Controller
 	}
 
 
+
 	// admin function -------------------------->
 
 	function Allorders(Request $request)
@@ -134,51 +180,53 @@ class OrderController extends Controller
 			$order->where('user_id', $request->user_id);
 		}
 
-		$order = $order->orderBy(['created_at','desc'])->get();
+		$order = $order->orderBy(['created_at', 'desc'])->get();
 		return response()->json(["status" => 'success', "data" => $order], 200);
 	}
 
-	public function adminShow($id)
-    {
-        $order = Order::find($id);
+	public function adminSingleOrder($id)
+	{
+		$order = Order::find($id);
 
-        if (!$order) {
-            return response()->json(['message' => 'Order not found'], 404);
-        }
+		if (!$order) {
+			return response()->json(['message' => 'Order not found'], 404);
+		}
 
-        return response()->json($order);
-    }
+		return response()->json($order);
+	}
 
-	public function adminUpdate(Request $request, $id)
-    {
-        $order = Order::find($id);
+	public function adminOrderUpdate(Request $request, $id)
+	{
+		$order = Order::find($id);
 
-        if (!$order) {
-            return response()->json(['message' => 'Order not found'], 404);
-        }
+		if (!$order) {
+			return response()->json(['message' => 'Order not found '], 404);
+		}
 
-        $validatedData = $request->validate([
-            'payment_status' => 'in:pending,successful,failed',
-            '    ' => 'in:pending,confirmed,delivered,canceled',
-            'order_notes' => 'nullable|string|max:500',
-        ]);
+		$validatedData = $request->validate([
+			'payment_status' => 'in:pending,successful,failed',
+			'    ' => 'in:pending,confirmed,delivered,canceled',
+			'order_notes' => 'nullable|string|max:500',
+		]);
 
-        $order->update($validatedData);
+		$order->update($validatedData);
 
-        return response()->json(['message' => 'Order updated successfully', 'order' => $order]);
-    }
+		return response()->json(['message' => 'Order updated successfully', 'order' => $order]);
+	}
 
 
-    public function adminDestroy($id)
-    {
-        $order = Order::find($id);
+	public function adminDestroy($id)
+	{
+		$order = Order::find($id);
 
-        if (!$order) {
-            return response()->json(['message' => 'Order not found'], 404);
-        }
+		if (!$order) {
+			return response()->json(['message' => 'Order not found'], 404);
+		}
 
-        $order->delete();
+		$order->delete();
 
-        return response()->json(['message' => 'Order deleted successfully']);
-    }
+		return response()->json(['message' => 'Order deleted successfully']);
+	}
+
+	
 }

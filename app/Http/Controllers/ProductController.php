@@ -55,7 +55,7 @@ class ProductController extends Controller
                 Storage::disk("public")->delete($oldImages);
                 Storage::disk("public")->delete($oldBanner);
             }
-    
+
             if ($e->getCode() === "23000") {
                 return response()->json([
                     "status" => "failed",
@@ -70,14 +70,66 @@ class ProductController extends Controller
             ], 500);
         }
     }
+
+
+
+
     function getAllProducts(Request $request)
     {
-
         $query = $request->query();
         $products = Product::with(["category", "subcategory"]);
 
+        // Filter by product name
         if (!empty($query['name'])) {
             $products->where("name", "like", "%" . $query['name'] . "%");
+        }
+
+        // Filter by category
+        if (!empty($query['category_id'])) {
+            $products->where("category_id", $query['category_id']);
+        }
+
+        // Filter by subcategory
+        if (!empty($query['subcategory_id'])) {
+            $products->where("subcategory_id", $query['subcategory_id']);
+        }
+
+        // Filter by price range
+        if (!empty($query['min_price']) && !empty($query['max_price'])) {
+            $products->whereBetween('price', [$query['min_price'], $query['max_price']]);
+        }
+
+        // Sorting
+        if (!empty($query['sort_by'])) {
+            switch ($query['sort_by']) {
+                case 'price_asc':
+                    $products->orderBy('price', 'asc');
+                    break;
+                case 'price_desc':
+                    $products->orderBy('price', 'desc');
+                    break;
+                case 'latest':
+                    $products->orderBy('created_at', 'desc');
+                    break;
+                case 'rating':
+                    $products->orderBy('rating', 'desc'); // Sort by rating first
+                    break;
+            }
+        }
+
+        // Check for additional sorting criteria if both price and rating are provided
+        if (!empty($query['sort_by']) && isset($query['sort_secondary'])) {
+            switch ($query['sort_secondary']) {
+                case 'price_asc':
+                    $products->orderBy('price', 'asc');
+                    break;
+                case 'price_desc':
+                    $products->orderBy('price', 'desc');
+                    break;
+                case 'rating':
+                    $products->orderBy('rating', 'desc');
+                    break;
+            }
         }
 
         $products = $products->get();
@@ -94,6 +146,9 @@ class ProductController extends Controller
             "data" => $products
         ], 200);
     }
+
+
+
 
     function updateProduct($id, Request $request)
     {

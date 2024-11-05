@@ -6,14 +6,14 @@ class orderService
 	{
 		$subtotal = $this->calculateSubtotal($request->products);
 		$discount = $this->calculateDiscount($subtotal, $request->coupon_code);
-		$shipping = $this->calculateShipping($request->products['shipping_address']);
+		$shipping = $this->calculateShipping($request->shipping_address);
 
 		return [
 			'user_id' => $request->user_id,
 			'products' => json_encode($request->products),
 			'subtotal' => $subtotal,
 			'discount_amount' => $discount,
-			'shipping' => $shipping,
+			'shipping_cost' => $shipping,
 			'total_price' => $subtotal - $discount + $shipping,
 			'total_items' => collect($request->products)->sum('quantity'),
 			'shipping_address' => json_encode($request->shipping_address),

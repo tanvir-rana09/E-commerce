@@ -3,6 +3,7 @@
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SliderController;
@@ -66,4 +67,19 @@ Route::middleware(["auth:api"])->prefix("section")->group(function () {
     Route::post("/add", [SectionController::class, "addSection"]);
     Route::put("/update/{id}", [SectionController::class, "updateSection"]);
     Route::delete("/delete/{id}", [SectionController::class, "deleteSection"]);
+});
+
+// category blog operation route
+Route::middleware(["auth:api"])->prefix("order")->group(function () {
+    Route::get("/product/{id?}", [OrderController::class, "orderedItems"]);
+    Route::get("/{id?}", [OrderController::class, "userOrders"]);
+    Route::post("/create", [OrderController::class, "createOrder"]);
+    Route::put("/cancel/{id}", [OrderController::class, "cancelOrder"]);
+    Route::prefix('admin')->group(function () {
+        Route::get("/all-orders", [OrderController::class, "Allorders"]);
+        Route::get("/single-order", [OrderController::class, "singleOrder"]);
+        Route::get("/update", [OrderController::class, "adminOrderUpdate"]);
+        Route::get("/delete", [OrderController::class, "adminDestroy"]);
+        Route::delete("/delete/{id}", [OrderController::class, "deleteSection"]);
+    });
 });

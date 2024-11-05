@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 class Category extends Model
 {
-    protected $fillable = ["name", "image", "slug","parent_id"];
+    protected $fillable = ["name", "slug","parent_id"];
 
     function setNameAttribute($value)
     {

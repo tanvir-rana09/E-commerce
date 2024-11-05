@@ -11,7 +11,7 @@ class Order extends Model
         'products',
         'subtotal',
         'discount_amount',
-        'shipping',
+        'shipping_cost',
         'total_price',
         'total_items',
         'shipping_address',
@@ -32,4 +32,9 @@ class Order extends Model
     {
         return json_decode($value, true);
     }
+
+    function orderItems(){
+        return $this->hasMany(OrderItems::class);
+    }
+    
 }

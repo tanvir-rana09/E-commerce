@@ -13,16 +13,10 @@ class CategoryController extends Controller
         try {
             $validated = $request->validate([
                 "name" => "string|required",
-                "image" => "image",
                 "parent_id" => "numeric"
             ]);
-            $requestPath = $request->file("image");
-            $path = uploadFile($requestPath, "category");
-
-            $catgory = Category::create([
-                "name" => $validated["name"],
-                "image" => $path,
-            ]);
+    
+            $catgory = Category::create($validated);
             if (!empty($validated["parent_id"])) {
                 $catgory->parent_id = $validated["parent_id"];
                 $catgory->save();
@@ -37,7 +31,8 @@ class CategoryController extends Controller
             }
             return response()->json([
                 'status' => 'error',
-                'message' => 'Something went wrong. Please try again later.'
+                'message' => 'Something went wrong. Please try again later.',
+                'error'=>$e
             ], 500);
         }
     }
@@ -127,8 +122,8 @@ class CategoryController extends Controller
             ], 404);
         }
 
-        if ($category->image && file_exists(public_path("storage/".$category->image))) {
-            unlink(public_path("storage/".$category->image));
+        if ($category->image && file_exists(public_path("storage/" . $category->image))) {
+            unlink(public_path("storage/" . $category->image));
         }
 
         $category->delete();
