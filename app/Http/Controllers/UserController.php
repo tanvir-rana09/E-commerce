@@ -13,17 +13,43 @@ class UserController extends Controller
     //
     function register(AuthRequest $request)
     {
-        $validatedData = $request->validated();
+        // Validate the incoming data
+        $validatedData = $request->validate([
+            'name' => 'required|min:3|string',
+            'email' => 'required|email|unique:users,email', // Email must be unique
+            'password' => 'required|string|confirmed|min:6', // Password must match confirmation
+        ]);
+
+        // Check if the user already exists (optional, as unique validation is already used)
+        $existingUser = User::where('email', $validatedData['email'])->first();
+        if ($existingUser) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'User with this email already exists'
+            ], 400);
+        }
+
+        // Create a new user in the database
         $user = User::create([
             'name' => $validatedData['name'],
             'email' => $validatedData['email'],
-            'password' => bcrypt($validatedData['name']),
+            'password' => Hash::make($validatedData['password']), // Using Hash facade for password
         ]);
 
+        // If the user is created successfully, return a response
         if ($user) {
-            # code...
-            return response()->json(["data" => $validatedData, "status" => "201", "message" => "User created successfully"]);
+            return response()->json([
+                'data' => $user, // Return the created user data
+                'status' => 201, // Correct status code for created resource
+                'message' => 'User created successfully'
+            ], 201); // Return response with the status code
         }
+
+        // Return an error response if user creation failed
+        return response()->json([
+            'status' => 400,
+            'message' => 'Failed to create user'
+        ], 400);
     }
 
     function login(Request $request)
@@ -54,7 +80,8 @@ class UserController extends Controller
         return response()->json(['token' => $token, 'user' => $user], 200);
     }
 
-    function profile(){
+    function profile()
+    {
         $user = Auth::user()->only(['id', 'name', 'email']);
         return response()->json([
             "status" => "success",
