@@ -1,6 +1,6 @@
 <?php
 namespace App\Services;
-class orderService
+class OrderService
 {
 	public function prepareOrder($request)
 	{

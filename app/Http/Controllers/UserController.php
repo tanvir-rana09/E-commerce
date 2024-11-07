@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApiResponse;
 use App\Http\Requests\AuthRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -23,17 +24,14 @@ class UserController extends Controller
         // Check if the user already exists (optional, as unique validation is already used)
         $existingUser = User::where('email', $validatedData['email'])->first();
         if ($existingUser) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'User with this email already exists'
-            ], 400);
+            return ApiResponse::sendResponse('failed','this user already exists');
         }
 
         // Create a new user in the database
         $user = User::create([
             'name' => $validatedData['name'],
             'email' => $validatedData['email'],
-            'password' => Hash::make($validatedData['password']), // Using Hash facade for password
+            'password' => bcrypt($validatedData['password']), // Using Hash facade for password
         ]);
 
         // If the user is created successfully, return a response
@@ -46,10 +44,7 @@ class UserController extends Controller
         }
 
         // Return an error response if user creation failed
-        return response()->json([
-            'status' => 400,
-            'message' => 'Failed to create user'
-        ], 400);
+        return ApiResponse::sendResponse('failed','Failed to create user',400);
     }
 
     function login(Request $request)

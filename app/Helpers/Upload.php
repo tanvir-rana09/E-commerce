@@ -1,6 +1,6 @@
 <?php
+namespace App\Helpers;
 
-use Illuminate\Support\Facades\Storage;
 
 if (!function_exists('uploadFile')) {
 	function uploadFile($images, $folder = "taskImages")

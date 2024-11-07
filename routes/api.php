@@ -8,11 +8,14 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SliderController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VisitorController;
 use Illuminate\Support\Facades\Route;
 
 
 Route::post("/register", [UserController::class, "register"]);
 Route::post("/login", [UserController::class, "login"]);
+Route::post('/track-visit', [VisitorController::class, 'trackVisit']);
+Route::get('/visit-count', [VisitorController::class, 'getVisitCount']);
 
 // user route
 Route::middleware(["auth:api"])->prefix("auth")->group(function () {
@@ -83,3 +86,4 @@ Route::middleware(["auth:api"])->prefix("order")->group(function () {
         Route::delete("/delete/{id}", [OrderController::class, "deleteSection"]);
     });
 });
+
