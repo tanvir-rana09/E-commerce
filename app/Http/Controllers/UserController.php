@@ -7,6 +7,9 @@ use App\Http\Requests\AuthRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class UserController extends Controller
@@ -44,7 +47,7 @@ class UserController extends Controller
         }
 
         // Return an error response if user creation failed
-        return ApiResponse::sendResponse('failed','Failed to create user',400);
+        return ApiResponse::sendResponse('failed','Failed to create user',200);
     }
 
     function login(Request $request)
@@ -64,7 +67,7 @@ class UserController extends Controller
         $credentials = $request->only('email', 'password');
         $token = JWTAuth::attempt($credentials);
         if (!$token) {
-            return response()->json(['error' => 'Invalid credentials'], 401);
+            return response()->json(['error' => 'Invalid credentials!','status'=>401], 200);
         }
 
         // $user = Auth::user();
@@ -72,16 +75,35 @@ class UserController extends Controller
         $user = JWTAuth::setToken($token)->authenticate();
         $user->update(['token' => $token]);
 
-        return response()->json(['token' => $token, 'user' => $user], 200);
+        return response()->json(['token' => $token, 'user' => $user ,'status' => 200,], 200);
     }
 
     function profile()
     {
-        $user = Auth::user()->only(['id', 'name', 'email']);
-        return response()->json([
-            "status" => "success",
-            "data" => $user
-        ], 200);
+        try {
+            // Try to authenticate the user with the token
+            $user = JWTAuth::parseToken()->authenticate();
+    
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+            }
+    
+            // Token is valid and user is authenticated
+            return response()->json(['status' => 'success', 'message' => 'Token is valid', 'user' => $user]);
+    
+        } catch (TokenExpiredException $e) {
+            // Token has expired
+            return response()->json(['status' => 'error', 'message' => 'Token has expired'], 401);
+    
+        } catch (TokenInvalidException $e) {
+            // Token is invalid
+            return response()->json(['status' => 'error', 'message' => 'Token is invalid'], 401);
+    
+        } catch (JWTException $e) {
+            // Token is missing or there was another error
+            return response()->json(['status' => 'error', 'message' => 'Token is missing or invalid'], 401);
+        }
+        
     }
 
     function logout()
