@@ -19,7 +19,7 @@ Route::get('/visit-count', [VisitorController::class, 'getVisitCount']);
 
 // user route
 Route::middleware(["auth:api"])->prefix("auth")->group(function () {
-    Route::get("/profile", [UserController::class, "profile"]);
+    Route::get("/profile", [UserController::class, "profile"]);  
     Route::get("/logout", [UserController::class, "logout"]);
 });
 

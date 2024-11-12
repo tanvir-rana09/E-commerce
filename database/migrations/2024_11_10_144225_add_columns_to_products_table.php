@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             $table->integer('rating')->nullable()->default(1)->after('sells');
+            $table->string('item_type')->nullable();
+            $table->integer('status')->nullable()->default(1); // Corrected this line
         });
     }
 
@@ -23,6 +25,8 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             $table->dropColumn('rating');
+            $table->dropColumn('item_type');
+            $table->dropColumn('status'); // Dropping all added columns
         });
     }
 };

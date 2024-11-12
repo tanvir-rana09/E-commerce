@@ -6,6 +6,8 @@ use App\Models\Category;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
+use function App\Helpers\uploadFile;
+
 class CategoryController extends Controller
 {
     function addCategory(Request $request)
@@ -46,6 +48,9 @@ class CategoryController extends Controller
 
         if (!empty($query['name'])) {
             $categories->where("name", "like", "%" . $query['name'] . "%");
+        }
+        if (!empty($query['parent_id'])) {
+            $categories->find($query['parent_id']);
         }
 
         $categories = $categories->get();

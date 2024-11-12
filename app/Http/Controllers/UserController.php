@@ -27,7 +27,7 @@ class UserController extends Controller
         // Check if the user already exists (optional, as unique validation is already used)
         $existingUser = User::where('email', $validatedData['email'])->first();
         if ($existingUser) {
-            return ApiResponse::sendResponse('failed','this user already exists');
+            return ApiResponse::sendResponse('failed', 'this user already exists');
         }
 
         // Create a new user in the database
@@ -47,35 +47,24 @@ class UserController extends Controller
         }
 
         // Return an error response if user creation failed
-        return ApiResponse::sendResponse('failed','Failed to create user',200);
+        return ApiResponse::sendResponse('failed', 'Failed to create user', 200);
     }
 
     function login(Request $request)
     {
-        // $credentials = $request->only('email', 'password');
-
-        // if (!$token = JWTAuth::attempt($credentials)) {
-        //     return response()->json(['error' => 'Invalid credentials'], 401);
-        // }
-
-        // $user = JWTAuth::setToken($token)->authenticate();
-        // $user->update(['token' => $token]);
-
-        // return response()->json(['token' => $token, 'user' => $user], 200);
-
-
         $credentials = $request->only('email', 'password');
         $token = JWTAuth::attempt($credentials);
         if (!$token) {
-            return response()->json(['error' => 'Invalid credentials!','status'=>401], 200);
+            return response()->json(['error' => 'Invalid credentials!', 'status' => 401], 200);
         }
 
         // $user = Auth::user();
         // $user->update(['token' => $token]);
-        $user = JWTAuth::setToken($token)->authenticate();
+        JWTAuth::setToken($token)->authenticate();
+        $user = JWTAuth::user();
         $user->update(['token' => $token]);
 
-        return response()->json(['token' => $token, 'user' => $user ,'status' => 200,], 200);
+        return response()->json(['token' => $token, 'user' => $user, 'status' => 200,], 200);
     }
 
     function profile()
@@ -83,35 +72,32 @@ class UserController extends Controller
         try {
             // Try to authenticate the user with the token
             $user = JWTAuth::parseToken()->authenticate();
-    
+
             if (!$user) {
                 return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
             }
-    
+
             // Token is valid and user is authenticated
-            return response()->json(['status' => 'success', 'message' => 'Token is valid', 'user' => $user]);
-    
+            return response()->json(['status' => 'success', 'message' => 'Token is valid', 'user' => $user,'status'=>200],200);
         } catch (TokenExpiredException $e) {
             // Token has expired
             return response()->json(['status' => 'error', 'message' => 'Token has expired'], 401);
-    
         } catch (TokenInvalidException $e) {
             // Token is invalid
             return response()->json(['status' => 'error', 'message' => 'Token is invalid'], 401);
-    
         } catch (JWTException $e) {
             // Token is missing or there was another error
             return response()->json(['status' => 'error', 'message' => 'Token is missing or invalid'], 401);
         }
-        
     }
 
     function logout()
     {
         // jwt
         JWTAuth::invalidate(JWTAuth::parseToken());
-        Auth::user()->update(['token' => null]);
+        JWTAuth::user()->update(['token' => null]);
 
-        return response()->json(['message' => "log out successfully"], 200);
+        return response()->json(['message' => "log out successfully",'status'=>200], 200);
     }
 }
+ 

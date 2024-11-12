@@ -7,6 +7,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
+use function App\Helpers\uploadFile;
+
 class ProductController extends Controller
 {
     public $imagePath;
@@ -19,13 +21,15 @@ class ProductController extends Controller
                 "name" => "required|min:3",
                 "price" => "numeric|required",
                 "stock" => "numeric|required",
-                "category_id" => "numeric",
+                "category_id" => "required|numeric",
                 "subcategory_id" => "numeric",
                 'images' => 'array',
                 'images.*' => 'image',
-                'banner' => 'image',
-                'short_desc' => 'min:3',
+                'banner' => 'required|image',
+                'short_desc' => 'required|min:3',
                 'long_desc' => 'min:3',
+                'item_type' => 'required|min:3',
+                'status' => 'numeric',
             ]);
 
             if (!empty($validated["category_id"])) {
@@ -44,8 +48,9 @@ class ProductController extends Controller
             $product = Product::create($validated);
 
             return response()->json([
-                "status" => "success",
-                "data" => $product
+                "status-type" => "success",
+                "data" => $product,
+                "status" => 200,
             ], 201);
         } catch (QueryException $e) {
 
@@ -132,7 +137,15 @@ class ProductController extends Controller
             }
         }
 
-        $products = $products->get();
+
+
+        $page = $query['page'];
+        $perPage = $query['per_page'];
+
+        // Calculate the offset and apply pagination
+        $offset = ($page - 1) * $perPage;
+        $count = $products->count();
+        $products = $products->offset($offset)->limit($perPage)->get();
 
         if ($products->isEmpty()) {
             return response()->json([
@@ -141,8 +154,13 @@ class ProductController extends Controller
             ]);
         }
 
+        // Return paginated response
         return response()->json([
             "status" => "success",
+            "total" => $count,
+            "current_page" => $page,
+            "per_page" => $perPage,
+            "total_pages" => ceil($count / $perPage),
             "data" => $products
         ], 200);
     }
