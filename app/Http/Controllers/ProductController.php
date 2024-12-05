@@ -28,7 +28,7 @@ class ProductController extends Controller
                 'banner' => 'required|image',
                 'short_desc' => 'required|min:3',
                 'long_desc' => 'min:3',
-                'item_type' => 'required|min:3',
+                'gender' => 'required|min:3',
                 'status' => 'numeric',
             ]);
 
@@ -41,10 +41,18 @@ class ProductController extends Controller
 
             $requestImages = $request->file("images");
             $requestBanner = $request->file("banner");
-            $this->imagePath = uploadFile($requestImages, "products");
-            $this->bannerPath = uploadFile($requestBanner, "products");
-            $validated['images'] = json_encode($this->imagePath);
-            $validated['banner'] = $this->bannerPath;
+
+            // Check if the images file is present and upload it
+            if ($requestImages) {
+                $this->imagePath = uploadFile($requestImages, "products");
+                $validated['images'] = json_encode($this->imagePath); // Store image path as a JSON encoded string
+            }
+
+            // Check if the banner file is present and upload it
+            if ($requestBanner) {
+                $this->bannerPath = uploadFile($requestBanner, "products");
+                $validated['banner'] = $this->bannerPath; // Store banner path
+            }
             $product = Product::create($validated);
 
             return response()->json([
@@ -77,8 +85,6 @@ class ProductController extends Controller
     }
 
 
-
-
     function getAllProducts(Request $request)
     {
         $query = $request->query();
@@ -93,11 +99,18 @@ class ProductController extends Controller
         if (!empty($query['category_id'])) {
             $products->where("category_id", $query['category_id']);
         }
+        if (!empty($query['id'])) {
+            $products->where("id", $query['id']);
+        }
 
         // Filter by subcategory
         if (!empty($query['subcategory_id'])) {
             $products->where("subcategory_id", $query['subcategory_id']);
         }
+        if (isset($query['status'])) {
+            $products->where("status", $query['status']);
+        }
+
 
         // Filter by price range
         if (!empty($query['min_price']) && !empty($query['max_price'])) {
@@ -114,12 +127,14 @@ class ProductController extends Controller
                     $products->orderBy('price', 'desc');
                     break;
                 case 'latest':
-                    $products->orderBy('created_at', 'desc');
+                    $products->orderBy('created_at', 'asc');
                     break;
                 case 'rating':
                     $products->orderBy('rating', 'desc'); // Sort by rating first
                     break;
             }
+        } else {
+            $products->orderBy('created_at', 'desc');
         }
 
         // Check for additional sorting criteria if both price and rating are provided
@@ -139,8 +154,9 @@ class ProductController extends Controller
 
 
 
-        $page = $query['page'];
-        $perPage = $query['per_page'];
+        $page = $query['page'] ?? 1;
+        $perPage = $query['per_page'] ?? 10;
+
 
         // Calculate the offset and apply pagination
         $offset = ($page - 1) * $perPage;
@@ -168,13 +184,13 @@ class ProductController extends Controller
 
 
 
+
+
     function updateProduct($id, Request $request)
     {
         try {
-
             $product = Product::find($id);
             if (!$product) {
-                # code...
                 return response()->json(["status" => "failed", "message" => "product not found with this id $id"], 404);
             }
 
@@ -185,40 +201,64 @@ class ProductController extends Controller
                 "category_id" => "sometimes|numeric",
                 "subcategory_id" => "sometimes|numeric",
                 'images' => 'sometimes|array',
-                'images.*' => 'image',
                 'banner' => 'image|sometimes',
                 'short_desc' => 'min:3|sometimes',
                 'long_desc' => 'min:3|sometimes',
+                'gender' => 'min:3|sometimes',
+                'status' => 'numeric|sometimes',
             ]);
+            
+            if ($request->has('images')) {
+                $newImages = [];
 
-            if ($request->hasFile("images")) {
-                if ($product->images) {
-                    $oldImages = $product->images;
-                    Storage::disk("public")->delete($oldImages);
+                if ($request->input("images")) {
+                    $baseUrl = url('storage/') . '/';
+
+                    $newImagesWithUrl = $request->input("images");
+                    $newImages = array_map(function ($image) use ($baseUrl) {
+                        return str_replace($baseUrl, '', $image);
+                    }, $newImagesWithUrl ?? []);
+
+                    $oldImages = array_values(array_diff($product->images ?? [], $newImages));
+                    $uniqueOldImages = array_map(function ($image) use ($baseUrl) {
+                        return str_replace($baseUrl, '', $image);
+                    }, $oldImages ?? []);
+
+                    Storage::disk('public')->delete($uniqueOldImages);
                 }
-                $imagePaths = uploadFile($request->file("images"), "products");
-                $validated['images'] = json_encode($imagePaths);
+
+                if ($request->file("images")) {
+                    $uploadedImages = uploadFile($request->file("images"), "products");
+                    $newImages = array_merge($newImages, $uploadedImages);
+                }
+
+                $validated['images'] = json_encode($newImages);
             }
+
+
+            // Process banner if provided
             if ($request->hasFile("banner")) {
+                // Delete old banner if present
                 if ($product->banner) {
-                    $oldImages = $product->banner;
-                    Storage::disk("public")->delete($oldImages);
+                    Storage::disk("public")->delete($product->banner);
                 }
-                $imagePaths = uploadFile($request->file("banner"), "products");
-                $validated['banner'] = $imagePaths;
+                $bannerPath = uploadFile($request->file("banner"), "products");
+                $validated['banner'] = $bannerPath;
             }
 
             $product->update($validated);
             return response()->json([
-                "status" => "success",
+                "status" => 200,
                 "message" => "Product updated successfully!",
                 "product" => $product
             ]);
+
+
         } catch (QueryException $error) {
             if ($error->getCode() === "23000") {
                 return response()->json([
                     "status" => "MySql Error",
-                    "message" => "the parent category not avaiable"
+                    "message" => "the parent category not available"
                 ]);
             }
 
@@ -228,6 +268,7 @@ class ProductController extends Controller
             ]);
         }
     }
+
     function deleteProduct($id)
     {
 
@@ -235,9 +276,9 @@ class ProductController extends Controller
 
         if (!$product) {
             return response()->json([
-                "status" => "error",
+                "status" => 404,
                 "message" => "Product not found"
-            ], 404);
+            ], 200);
         }
 
         if ($product->images) {
@@ -248,7 +289,7 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json([
-            "status" => "success",
+            "status" => 200,
             "message" => "Product deleted successfully"
         ], 200);
     }

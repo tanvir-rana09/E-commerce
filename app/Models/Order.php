@@ -32,9 +32,7 @@ class Order extends Model
     {
         return json_decode($value, true);
     }
-
-    function orderItems(){
-        return $this->hasMany(OrderItems::class);
+    public function orderItems(){
+        return $this->hasOne(OrderItems::class,);
     }
-    
 }

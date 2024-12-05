@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
+use function PHPSTORM_META\map;
+
 class Product extends Model
 {
     protected $fillable = [
@@ -19,10 +21,18 @@ class Product extends Model
         'long_desc',
         'rating',
         'sells',
-        'item_type',
+        'gender',
         'status'
     ];
+    // public function setImagesAttribute($value)
+    // {
+    //     $images = $value;
+    //     foreach ($images as $image) {
+    //         $image = str_replace(url('storage/') . '/', '', $image);
+    //     }
 
+    //     return json_encode($images);
+    // }
 
     public function setNameAttribute($value)
     {
@@ -31,12 +41,32 @@ class Product extends Model
     }
     public function getImagesAttribute($value)
     {
-        return json_decode($value, true);
+        // Decode the JSON string into an array
+        $images = json_decode($value, true);
+
+        // Check if the decoding was successful and the images array is not empty
+        if ($images && is_array($images)) {
+            // Map each image to a full URL if it doesn't already have one
+            return array_map(function ($image) {
+                // Check if the image path already starts with 'http' or 'https'
+                if (preg_match('/^http?:\/\//', $image)) {
+                    return $image; // Return as-is if it's already a URL
+                }
+                return url('storage/' . $image); // Otherwise, prepend the storage URL
+            }, $images);
+        }
+
+        // Return an empty array if there are no images
+        return [];
     }
+
+
+
     public function getBannerAttribute($value)
     {
-        return 'http://127.0.0.1:8000/storage/' . $value;
+        return url('storage/' . $value);
     }
+
 
     public function category()
     {

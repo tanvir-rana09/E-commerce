@@ -98,13 +98,13 @@ class OrderController extends Controller
 	{
 		try {
 			if ($id) {
-				$order = orderItems::with(['product','order'])->where('id', $id)->first();
+				$order = orderItems::with(['product', 'order'])->where('id', $id)->first();
 				if (!$order) {
 					return response()->json(['message' => 'Ordered items not found'], 404);
 				}
 				return response()->json(['orders' => $order]);
 			}
-			$orders = orderItems::with(['product','order'])->get();
+			$orders = orderItems::with(['product', 'order'])->get();
 			return response()->json(['orders' => $orders]);
 		} catch (\Exception $e) {
 			return $e;
@@ -168,20 +168,44 @@ class OrderController extends Controller
 
 	function Allorders(Request $request)
 	{
-		$order = Order::query();
+		$query = $request->query();
+		$orders = Order::with('orderItems');
+		// return $order;
+		if (!empty($query['payment_status'])) {
+			$orders->where('payment_status', $query['payment_status']);
+		}
+		if (!empty($query['delivery_status'])) {
+			$orders->where('delivery_status', $query['delivery_status']);
+		}
+		if (!empty($query['user_id'])) {
+			$orders->where('user_id', $query['user_id']);
+		}
 
-		if ($request->has('payment_status')) {
-			$order->where('payment_status', $request->payment_status);
-		}
-		if ($request->has('delivery_status')) {
-			$order->where('delivery_status', $request->delivery_status);
-		}
-		if ($request->has('user_id')) {
-			$order->where('user_id', $request->user_id);
+
+		$page = $query['page'] ?? 1;
+		$perPage = $query['per_page'] ?? 10;
+
+		$offset = ($page - 1) * $perPage;
+		$count = $orders->count();
+		$orders = $orders->offset($offset)->limit($perPage)->get();
+
+		if ($orders->isEmpty()) {
+			return response()->json([
+				"status" => "failed",
+				"message" => "No order found"
+			]);
 		}
 
-		$order = $order->orderBy(['created_at', 'desc'])->get();
-		return response()->json(["status" => 'success', "data" => $order], 200);
+		// Return paginated response
+		return response()->json([
+			"status" => 200,
+			"total" => $count,
+			"current_page" => $page,
+			"per_page" => $perPage,
+			"total_pages" => ceil($count / $perPage),
+			"data" => $orders
+		], 200);
+
 	}
 
 	public function adminSingleOrder($id)
@@ -227,6 +251,4 @@ class OrderController extends Controller
 
 		return response()->json(['message' => 'Order deleted successfully']);
 	}
-
-	
 }

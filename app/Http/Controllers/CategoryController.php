@@ -17,13 +17,14 @@ class CategoryController extends Controller
                 "name" => "string|required",
                 "parent_id" => "numeric"
             ]);
-    
+
             $catgory = Category::create($validated);
             if (!empty($validated["parent_id"])) {
                 $catgory->parent_id = $validated["parent_id"];
                 $catgory->save();
             }
-            return response()->json($catgory);
+            return response()->json(['status' => 200,
+                'message' => 'category added','data'=>$catgory]);
         } catch (QueryException $e) {
             if ($e->getCode() === '23000') {
                 return response()->json([
@@ -34,7 +35,7 @@ class CategoryController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Something went wrong. Please try again later.',
-                'error'=>$e
+                'error' => $e
             ], 500);
         }
     }
@@ -53,7 +54,15 @@ class CategoryController extends Controller
             $categories->find($query['parent_id']);
         }
 
-        $categories = $categories->get();
+        $page = $query['page'] ?? 1;
+        $perPage = $query['per_page'] ?? 10;
+
+
+        // Calculate the offset and apply pagination
+        $offset = ($page - 1) * $perPage;
+        $count = $categories->count();
+        $categories = $categories->offset($offset)->limit($perPage)->get();
+
 
         if ($categories->isEmpty()) {
             return response()->json([
@@ -63,7 +72,11 @@ class CategoryController extends Controller
         }
 
         return response()->json([
-            "status" => "success",
+            "status" => 200,
+            "total" => $count,
+            "current_page" => $page,
+            "per_page" => $perPage,
+            "total_pages" => ceil($count / $perPage),
             "data" => $categories
         ], 200);
     }
@@ -82,22 +95,13 @@ class CategoryController extends Controller
 
             $validated = $request->validate([
                 "name" => "sometimes|string",
-                "image" => "sometimes|image",
+                
                 "parent_id" => "sometimes|numeric"
             ]);
 
-            if ($request->hasFile("image")) {
-                if ($category->image && file_exists(public_path("storage/" . $category->image))) {
-                    unlink(public_path("storage/" . $category->image));
-                }
-                // return dd($category->image && file_exists(public_path("storage/catgory/" . $category->image)));
-                $path = uploadFile($request->file("image"), "category");
-                $validated["image"] = $path;
-            }
-
             $category->update($validated);
             return response()->json([
-                "status" => "success",
+                "status" => 200,
                 "message" => "category updated successfully",
                 "data" => $category
             ], 200);
