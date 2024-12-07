@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -33,6 +34,13 @@ class Order extends Model
         return json_decode($value, true);
     }
     public function orderItems(){
-        return $this->hasOne(OrderItems::class,);
+        return $this->hasMany(OrderItems::class,);
+    }
+    public function order(){
+        return $this->belongsTo(Order::class,);
+    }
+    public function getCreatedAtAttribute()
+    {
+        return Carbon::parse($this->attributes['created_at'])->format('F j, Y');
     }
 }

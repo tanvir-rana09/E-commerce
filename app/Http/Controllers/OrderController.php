@@ -169,13 +169,16 @@ class OrderController extends Controller
 	function Allorders(Request $request)
 	{
 		$query = $request->query();
-		$orders = Order::with('orderItems');
+		$orders = Order::query();
 		// return $order;
 		if (!empty($query['payment_status'])) {
 			$orders->where('payment_status', $query['payment_status']);
 		}
 		if (!empty($query['delivery_status'])) {
 			$orders->where('delivery_status', $query['delivery_status']);
+		}
+		if (!empty($query['start_date']) && !empty($query['end_date'])) {
+			$orders->whereBetween('created_at', [$query['start_date'], $query['end_date']]);
 		}
 		if (!empty($query['user_id'])) {
 			$orders->where('user_id', $query['user_id']);
@@ -184,10 +187,9 @@ class OrderController extends Controller
 
 		$page = $query['page'] ?? 1;
 		$perPage = $query['per_page'] ?? 10;
-
 		$offset = ($page - 1) * $perPage;
 		$count = $orders->count();
-		$orders = $orders->offset($offset)->limit($perPage)->get();
+		$orders = $orders->offset($offset)->limit($perPage)->orderBy('created_at', 'desc')->get();
 
 		if ($orders->isEmpty()) {
 			return response()->json([
@@ -205,7 +207,6 @@ class OrderController extends Controller
 			"total_pages" => ceil($count / $perPage),
 			"data" => $orders
 		], 200);
-
 	}
 
 	public function adminSingleOrder($id)
@@ -228,14 +229,13 @@ class OrderController extends Controller
 		}
 
 		$validatedData = $request->validate([
-			'payment_status' => 'in:pending,successful,failed',
-			'    ' => 'in:pending,confirmed,delivered,canceled',
-			'order_notes' => 'nullable|string|max:500',
+			'payment_status' => 'sometimes|in:pending,successful,failed',
+			'delivery_status' => 'sometimes|in:pending,confirmed,delivered,canceled',
 		]);
 
 		$order->update($validatedData);
 
-		return response()->json(['message' => 'Order updated successfully', 'order' => $order]);
+		return response()->json(['message' => 'Order updated successfully', 'order' => $order, 'status' => 200]);
 	}
 
 
@@ -249,6 +249,6 @@ class OrderController extends Controller
 
 		$order->delete();
 
-		return response()->json(['message' => 'Order deleted successfully']);
+		return response()->json(['message' => 'Order deleted successfully', 'status' => 200]);
 	}
 }
