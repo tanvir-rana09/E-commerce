@@ -25,6 +25,7 @@ class OrderController extends Controller
 			$validator = Validator::make($request->all(), [
 				'user_id' => 'required|exists:users,id',
 				'products' => 'required|array|min:1',
+				'size' => 'sometimes|string',
 				'products.*.product_id' => 'required|exists:products,id',
 				'products.*.quantity' => 'required|integer|min:1',
 				'products.*.price' => 'required|integer|min:0',

@@ -20,10 +20,12 @@ class ProductController extends Controller
             $validated = $request->validate([
                 "name" => "required|min:3",
                 "price" => "numeric|required",
+                "discount" => "sometimes|numeric",
                 "stock" => "numeric|required",
                 "category_id" => "required|numeric",
                 "subcategory_id" => "numeric",
                 'images' => 'array',
+                'size' => 'array',
                 'images.*' => 'image',
                 'banner' => 'required|image',
                 'short_desc' => 'required|min:3',
@@ -53,6 +55,7 @@ class ProductController extends Controller
                 $this->bannerPath = uploadFile($requestBanner, "products");
                 $validated['banner'] = $this->bannerPath; // Store banner path
             }
+            $validated['sku'] = strtoupper(uniqid('REF'));
             $product = Product::create($validated);
 
             return response()->json([
@@ -197,17 +200,19 @@ class ProductController extends Controller
             $validated = $request->validate([
                 "name" => "sometimes|min:3",
                 "price" => "sometimes|numeric|between:0,999999.99",
+                "discount" => "sometimes|numeric|between:0,99",
                 "stock" => "sometimes|numeric",
                 "category_id" => "sometimes|numeric",
                 "subcategory_id" => "sometimes|numeric",
                 'images' => 'sometimes|array',
+                'size' => 'sometimes|array',
                 'banner' => 'image|sometimes',
                 'short_desc' => 'min:3|sometimes',
                 'long_desc' => 'min:3|sometimes',
                 'gender' => 'min:3|sometimes',
                 'status' => 'numeric|sometimes',
             ]);
-            
+
             if ($request->has('images')) {
                 $newImages = [];
 
@@ -252,8 +257,6 @@ class ProductController extends Controller
                 "message" => "Product updated successfully!",
                 "product" => $product
             ]);
-
-
         } catch (QueryException $error) {
             if ($error->getCode() === "23000") {
                 return response()->json([

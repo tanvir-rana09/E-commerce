@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             $table->integer('rating')->nullable()->default(1)->after('sells');
             $table->string('gender')->nullable();
-            $table->integer('status')->nullable()->default(1); // Corrected this line
+            $table->integer('status')->nullable()->default(1);
+
         });
     }
 

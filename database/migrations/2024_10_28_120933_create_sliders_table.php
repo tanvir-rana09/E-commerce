@@ -11,12 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('sliders', function (Blueprint $table) {
+        Schema::create('section', function (Blueprint $table) {
             $table->id();
-            $table->string("page")->unique();
+            $table->string("name")->unique();
             $table->json("files")->nullable();
+            $table->enum('type', ['image', 'video', 'mixed'])->default('image');
+            $table->text('description')->nullable();
+            $table->string('button_text')->nullable();
+            $table->string('button_link')->nullable();
+            $table->boolean('status')->default(1);
             $table->timestamps();
         });
+        
     }
 
     /**

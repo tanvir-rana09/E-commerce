@@ -18,8 +18,15 @@ return new class extends Migration
             $table->float("price");
             $table->unsignedInteger("stock");
             $table->text('banner');
-            $table->integer('sells')->nullable()->default(0);
+            $table->integer('sells')->default(0);
+            $table->integer('rating')->default(0);
+            $table->string('gender')->nullable();
+            $table->integer('status')->nullable()->default(1);
             $table->text('images')->nullable();
+            $table->string('sku')->unique();
+            $table->json('size')->nullable();
+            $table->float('discount')->default(0);
+            $table->json('colors')->nullable();
             $table->text('short_desc')->nullable();
             $table->text('long_desc')->nullable();
             $table->unsignedBigInteger('category_id')->nullable();

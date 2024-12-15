@@ -78,7 +78,7 @@ class UserController extends Controller
             }
 
             // Token is valid and user is authenticated
-            return response()->json(['status' => 'success', 'message' => 'Token is valid', 'user' => $user,'status'=>200],200);
+            return response()->json(['status' => 'success', 'message' => 'Token is valid', 'user' => $user, 'status' => 200], 200);
         } catch (TokenExpiredException $e) {
             // Token has expired
             return response()->json(['status' => 'error', 'message' => 'Token has expired'], 401);
@@ -97,7 +97,6 @@ class UserController extends Controller
         JWTAuth::invalidate(JWTAuth::parseToken());
         JWTAuth::user()->update(['token' => null]);
 
-        return response()->json(['message' => "log out successfully",'status'=>200], 200);
+        return response()->json(['message' => "log out successfully", 'status' => 200], 200);
     }
 }
- 

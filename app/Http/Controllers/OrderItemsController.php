@@ -10,7 +10,9 @@ class OrderItemsController extends Controller
     public function OrderItems(Request $request, $id)
     {
 
-        $orders = OrderItems::where('order_id', $id)->with('product')->get();
+        $orders = OrderItems::where('order_id', $id)->with(['product'=>function($query){
+            return $query->select(['id','banner','name']);
+        }])->get();
 
         // Check if the order exists
         if (!$orders) {

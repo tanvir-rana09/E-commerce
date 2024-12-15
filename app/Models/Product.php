@@ -22,7 +22,10 @@ class Product extends Model
         'rating',
         'sells',
         'gender',
-        'status'
+        'status',
+        'discount',
+        'size',
+        'sku'
     ];
     // public function setImagesAttribute($value)
     // {
