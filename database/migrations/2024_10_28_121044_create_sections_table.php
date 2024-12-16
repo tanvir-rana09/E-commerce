@@ -13,11 +13,16 @@ return new class extends Migration
     {
         Schema::create('sections', function (Blueprint $table) {
             $table->id();
-            $table->string("title");
-            $table->text("desc");
-            $table->string("image");
+            $table->string("name")->unique();
+            $table->text("file")->nullable();
+            $table->enum('type', ['image', 'video', 'mixed'])->default('image');
+            $table->text('description')->nullable();
+            $table->string('button_text')->nullable();
+            $table->string('button_link')->nullable();
+            $table->boolean('status')->default(1);
             $table->timestamps();
         });
+        
     }
 
     /**
@@ -25,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sections');
+        Schema::dropIfExists('sliders');
     }
 };

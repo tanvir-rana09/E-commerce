@@ -27,15 +27,10 @@ class Product extends Model
         'size',
         'sku'
     ];
-    // public function setImagesAttribute($value)
-    // {
-    //     $images = $value;
-    //     foreach ($images as $image) {
-    //         $image = str_replace(url('storage/') . '/', '', $image);
-    //     }
-
-    //     return json_encode($images);
-    // }
+    protected $casts = [
+        'size' => 'array',
+    ];
+    
 
     public function setNameAttribute($value)
     {

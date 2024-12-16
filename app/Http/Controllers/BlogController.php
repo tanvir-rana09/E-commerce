@@ -6,6 +6,8 @@ use App\Models\Blog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
+use function App\Helpers\uploadFile;
+
 class BlogController extends Controller
 {
     // Add a new blog with image upload

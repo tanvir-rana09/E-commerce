@@ -6,8 +6,6 @@ use App\Models\Category;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
-use function App\Helpers\uploadFile;
-
 class CategoryController extends Controller
 {
     function addCategory(Request $request)

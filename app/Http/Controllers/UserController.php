@@ -6,7 +6,6 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\AuthRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
@@ -58,8 +57,6 @@ class UserController extends Controller
             return response()->json(['error' => 'Invalid credentials!', 'status' => 401], 200);
         }
 
-        // $user = Auth::user();
-        // $user->update(['token' => $token]);
         JWTAuth::setToken($token)->authenticate();
         $user = JWTAuth::user();
         $user->update(['token' => $token]);

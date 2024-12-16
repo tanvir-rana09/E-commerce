@@ -7,7 +7,6 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemsController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SectionController;
-use App\Http\Controllers\SliderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitorController;
 use Illuminate\Support\Facades\Route;
@@ -57,13 +56,6 @@ Route::middleware(["auth:api"])->prefix("comment")->group(function () {
     Route::delete("/delete/{id}", [CommentController::class, "deleteComment"]);
 });
 
-// category blog operation route
-Route::middleware(["auth:api"])->prefix("slider")->group(function () {
-    Route::get("/", [SliderController::class, "getAllSliders"]);
-    Route::post("/add", [SliderController::class, "addSlider"]);
-    Route::put("/update/{id}", [SliderController::class, "updateSlider"]);
-    Route::delete("/delete/{id}", [SliderController::class, "deleteSlider"]);
-});
 
 // category blog operation route
 Route::middleware(["auth:api"])->prefix("section")->group(function () {
