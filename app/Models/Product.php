@@ -39,22 +39,15 @@ class Product extends Model
     }
     public function getImagesAttribute($value)
     {
-        // Decode the JSON string into an array
         $images = json_decode($value, true);
-
-        // Check if the decoding was successful and the images array is not empty
         if ($images && is_array($images)) {
-            // Map each image to a full URL if it doesn't already have one
             return array_map(function ($image) {
-                // Check if the image path already starts with 'http' or 'https'
                 if (preg_match('/^http?:\/\//', $image)) {
-                    return $image; // Return as-is if it's already a URL
+                    return $image;
                 }
-                return url('storage/' . $image); // Otherwise, prepend the storage URL
+                return url('storage/' . $image);
             }, $images);
         }
-
-        // Return an empty array if there are no images
         return [];
     }
 

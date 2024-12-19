@@ -90,15 +90,14 @@ class SectionController extends Controller
         $section = Section::findOrFail($id);
 
         $validatedData = $request->validate([
-            'name' => "sometimes|string|unique:sections,name,",
-            'file' => 'sometimes',
+            'name' => "sometimes|string",
+            'file' => 'sometimes|file',
             'description' => 'sometimes|string',
             'button_text' => 'sometimes|string|max:255',
             'button_link' => 'sometimes',
             'status' => 'sometimes|boolean',
         ]);
         if ($request->hasFile('file')) {
-
             if ($section->file) {
                 $image = $section->file;
                 $baseUrl = url('storage/') . '/';

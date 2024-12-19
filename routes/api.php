@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemsController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SectionController;
+use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitorController;
 use Illuminate\Support\Facades\Route;
@@ -19,7 +20,7 @@ Route::get('/visit-count', [VisitorController::class, 'getVisitCount']);
 
 // user route
 Route::middleware(["auth:api"])->prefix("auth")->group(function () {
-    Route::get("/profile", [UserController::class, "profile"]);  
+    Route::get("/profile", [UserController::class, "profile"]);
     Route::get("/logout", [UserController::class, "logout"]);
 });
 
@@ -77,7 +78,9 @@ Route::middleware(["auth:api"])->prefix("order")->group(function () {
         Route::get("/single-order", [OrderController::class, "singleOrder"]);
         Route::put("/update/{id}", [OrderController::class, "adminOrderUpdate"]);
         Route::delete("/delete/{id}", [OrderController::class, "adminDestroy"]);
-        // Route::delete("/delete/{id}", [OrderController::class, "deleteSection"]);
     });
 });
-
+Route::middleware(["auth:api"])->group(function () {
+    Route::get('/site-settings', [SiteSettingController::class, 'getAllSettings']);
+    Route::post('/site-settings', [SiteSettingController::class, 'updateSettings']);
+});

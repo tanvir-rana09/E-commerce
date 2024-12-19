@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class Category extends Model
 {
-    protected $fillable = ["name", "slug","parent_id"];
+    protected $fillable = ["name", "slug", "parent_id", "file"];
     protected $appends = ['formatted_created_at'];
 
     function setNameAttribute($value)
@@ -17,8 +17,9 @@ class Category extends Model
         $this->attributes["slug"] = Str::slug($value);
     }
 
-    function subcategory(){
-        return $this->hasMany(Category::class,"parent_id")->with("subcategory");
+    function subcategory()
+    {
+        return $this->hasMany(Category::class, "parent_id")->with("subcategory");
     }
 
     public function parent()
@@ -28,5 +29,9 @@ class Category extends Model
     public function getFormattedCreatedAtAttribute()
     {
         return Carbon::parse($this->attributes['created_at'])->format('F j, Y');
+    }
+    public function getFileAttribute($value)
+    {
+        return url('storage/' . $value);
     }
 }

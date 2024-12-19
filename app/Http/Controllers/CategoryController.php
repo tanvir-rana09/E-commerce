@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+use function App\Helpers\uploadFile;
 
 class CategoryController extends Controller
 {
@@ -13,18 +16,26 @@ class CategoryController extends Controller
         try {
             $validated = $request->validate([
                 "name" => "string|required",
-                "parent_id" => "numeric"
+                "parent_id" => "numeric",
+                'file' => 'required|image',
             ]);
+            $validated['file'] = uploadFile($request->file('file'), 'category');
 
-            $catgory = Category::create($validated);
+            $catgory = Category::create([
+                'name' => $validated['name'],
+                'file' => $validated['file']
+            ]);
             if (!empty($validated["parent_id"])) {
                 $catgory->parent_id = $validated["parent_id"];
                 $catgory->save();
             }
-            return response()->json(['status' => 200,
-                'message' => 'category added','data'=>$catgory]);
+            return response()->json([
+                'status' => 200,
+                'message' => 'category added',
+                'data' => $catgory
+            ]);
         } catch (QueryException $e) {
-            if ($e->getCode() === '23000') {
+            if ($e->getCode() == '23000') {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'The specified parent_id does not exist in the database.'
@@ -93,9 +104,19 @@ class CategoryController extends Controller
 
             $validated = $request->validate([
                 "name" => "sometimes|string",
-                
+                "file" => "sometimes|image",
                 "parent_id" => "sometimes|numeric"
             ]);
+
+            if ($request->hasFile('file')) {
+                if ($category->file) {
+                    $image = $category->file;
+                    $baseUrl = url('storage/') . '/';
+                    $replaceFile = str_replace($baseUrl, '', $image);
+                    Storage::disk('public')->delete($replaceFile);
+                }
+                $validatedData['file'] = uploadFile($request->file('file'), 'category');
+            }
 
             $category->update($validated);
             return response()->json([
@@ -129,8 +150,11 @@ class CategoryController extends Controller
             ], 404);
         }
 
-        if ($category->image && file_exists(public_path("storage/" . $category->image))) {
-            unlink(public_path("storage/" . $category->image));
+        if (!empty($section->file)) {
+            $image = $category->file;
+            $baseUrl = url('storage/') . '/';
+            $replaceFile = str_replace($baseUrl, '', $image);
+            Storage::disk('public')->delete($replaceFile);
         }
 
         $category->delete();

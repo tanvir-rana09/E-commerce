@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string("name");
             $table->text('image')->nullable();
             $table->string("slug");
+            $table->text("file");
             $table->unsignedBigInteger("parent_id")->nullable();
             $table->foreign("parent_id")->references("id")->on("categories")->onDelete("cascade")->onUpdate('cascade');
             $table->timestamps();

@@ -6,7 +6,7 @@ use App\Models\Product;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\Str;
 use function App\Helpers\uploadFile;
 
 class ProductController extends Controller
@@ -55,7 +55,7 @@ class ProductController extends Controller
                 $this->bannerPath = uploadFile($requestBanner, "products");
                 $validated['banner'] = $this->bannerPath; // Store banner path
             }
-            $validated['sku'] = strtoupper(uniqid('REF'));
+            $validated['sku'] =strtoupper(Str::random(8));;
             $product = Product::create($validated);
 
             return response()->json([
@@ -228,7 +228,6 @@ class ProductController extends Controller
                     $uniqueOldImages = array_map(function ($image) use ($baseUrl) {
                         return str_replace($baseUrl, '', $image);
                     }, $oldImages ?? []);
-
                     Storage::disk('public')->delete($uniqueOldImages);
                 }
 

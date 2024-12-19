@@ -11,4 +11,5 @@ class Section extends Model
     {
         return url('storage/' . $value);
     }
+    
 }

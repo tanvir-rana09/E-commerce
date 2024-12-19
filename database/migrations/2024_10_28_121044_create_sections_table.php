@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('sections', function (Blueprint $table) {
             $table->id();
             $table->string("name")->unique();
+            $table->string("title")->unique();
             $table->text("file")->nullable();
             $table->enum('type', ['image', 'video', 'mixed'])->default('image');
             $table->text('description')->nullable();
@@ -30,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sliders');
+        Schema::dropIfExists('sections');
     }
 };
