@@ -17,15 +17,15 @@ return new class extends Migration
             $table->unsignedBigInteger('product_id');
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
+            $table->string('status')->default('pending');
+            $table->json('size')->nullable();
             $table->unsignedInteger('quantity');
             $table->unsignedInteger('price');
+            $table->unsignedInteger('total_price');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('order_items');

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\OrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class OrderController extends Controller
 {
@@ -78,6 +79,7 @@ class OrderController extends Controller
 					'product_id' => $product['product_id'],
 					'quantity' => $product['quantity'],
 					'price' => $productModel['price'],
+					'total_price' => $productModel['price']* $product['quantity'],
 				]);
 				$productModel->decrement('stock', $product['quantity']);
 			}
@@ -141,28 +143,33 @@ class OrderController extends Controller
 
 	public function cancelOrder($id)
 	{
-
 		$order = Order::find($id);
-
+	
 		if (!$order) {
-			return response()->json(['message' => 'Order not found '], 404);
+			return response()->json(['message' => 'Order not found'], 404);
 		}
-
+	
+		// Prevent cancellation if the order is delivered
 		if ($order->delivery_status === 'delivered') {
 			return response()->json(['message' => 'Delivered orders cannot be canceled'], 400);
 		}
-
-		if ($order->user_id !== auth()->id()) {
+	
+		// Check if the authenticated user owns the order
+		if ($order->user_id != JWTAuth::id()) {
 			return response()->json(['message' => 'Unauthorized'], 403);
 		}
-
-
+	
+		// Update the delivery_status and status
 		$order->delivery_status = 'canceled';
+		$order->status = 'canceled'; // Update overall status to reflect cancellation
 		$order->save();
-
-		return response()->json(['message' => 'Order canceled successfully']);
+	
+		return response()->json([
+			'message' => 'Order canceled successfully',
+			'order' => $order, // Return the updated order details
+		], 200);
 	}
-
+	
 
 
 	// admin function -------------------------->
@@ -221,12 +228,13 @@ class OrderController extends Controller
 		return response()->json($order);
 	}
 
+
 	public function adminOrderUpdate(Request $request, $id)
 	{
 		$order = Order::find($id);
 
 		if (!$order) {
-			return response()->json(['message' => 'Order not found '], 404);
+			return response()->json(['message' => 'Order not found'], 404);
 		}
 
 		$validatedData = $request->validate([
@@ -234,10 +242,33 @@ class OrderController extends Controller
 			'delivery_status' => 'sometimes|in:pending,confirmed,delivered,canceled',
 		]);
 
+		// Update the payment_status and delivery_status
 		$order->update($validatedData);
 
-		return response()->json(['message' => 'Order updated successfully', 'order' => $order, 'status' => 200]);
+		// Determine the overall status based on payment_status and delivery_status
+		if ($order->payment_status === 'failed') {
+			$order->status = 'payment_failed';
+		} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'delivered') {
+			$order->status = 'completed';
+		} elseif ($order->delivery_status === 'canceled') {
+			$order->status = 'canceled';
+		} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'pending') {
+			$order->status = 'awaiting_delivery';
+		} elseif ($order->payment_status === 'pending' && $order->delivery_status === 'pending') {
+			$order->status = 'pending';
+		} else {
+			$order->status = 'processing';
+		}
+
+		$order->save();
+
+		return response()->json([
+			'message' => 'Order updated successfully',
+			'order' => $order,
+			'status' => 200
+		]);
 	}
+
 
 
 	public function adminDestroy($id)

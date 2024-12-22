@@ -22,6 +22,9 @@ Route::get('/visit-count', [VisitorController::class, 'getVisitCount']);
 Route::middleware(["auth:api"])->prefix("auth")->group(function () {
     Route::get("/profile", [UserController::class, "profile"]);
     Route::get("/logout", [UserController::class, "logout"]);
+    Route::put("/update-profile", [UserController::class, "changeProfile"]);
+    Route::put("/update-details", [UserController::class, "updateUserDetails"]);
+    Route::put("/update-password", [UserController::class, "changePassword"]);
 });
 
 // product crud operation route
@@ -72,6 +75,7 @@ Route::middleware(["auth:api"])->prefix("order")->group(function () {
     Route::get("/{id?}", [OrderController::class, "userOrders"]);
     Route::post("/create", [OrderController::class, "createOrder"]);
     Route::put("/cancel/{id}", [OrderController::class, "cancelOrder"]);
+    Route::put("/item/cancel/{id}", [OrderItemsController::class, "cancelOrderItem"]);
     Route::get("/order-items/{id}", [OrderItemsController::class, "OrderItems"]);
     Route::prefix('admin')->group(function () {
         Route::get("/all-orders", [OrderController::class, "Allorders"]);
@@ -83,4 +87,5 @@ Route::middleware(["auth:api"])->prefix("order")->group(function () {
 Route::middleware(["auth:api"])->group(function () {
     Route::get('/site-settings', [SiteSettingController::class, 'getAllSettings']);
     Route::post('/site-settings', [SiteSettingController::class, 'updateSettings']);
+    Route::get('/statistics', [VisitorController::class, 'statistics']);
 });

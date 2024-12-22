@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('visitors', function (Blueprint $table) {
             $table->id();
-            $table->integer('count')->default(0);
+            $table->string('ip')->nullable();
             $table->timestamps();
         });
     }

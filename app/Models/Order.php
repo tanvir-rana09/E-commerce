@@ -19,6 +19,8 @@ class Order extends Model
         'payment_method',
         'payment_number',
         'trx_id',
+        'size',
+        'status',
         'payment_status',
         'coupon_code',
         'delivery_status',

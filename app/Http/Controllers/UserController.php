@@ -6,10 +6,14 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\AuthRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Facades\JWTAuth;
+
+use function App\Helpers\uploadFile;
 
 class UserController extends Controller
 {
@@ -45,7 +49,7 @@ class UserController extends Controller
             ], 201); // Return response with the status code
         }
 
-        // Return an error response if user creation failed
+        
         return ApiResponse::sendResponse('failed', 'Failed to create user', 200);
     }
 
@@ -95,5 +99,76 @@ class UserController extends Controller
         JWTAuth::user()->update(['token' => null]);
 
         return response()->json(['message' => "log out successfully", 'status' => 200], 200);
+    }
+
+
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:8|confirmed',
+        ]);
+
+        $user =  JWTAuth::user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect',
+                'errors' => [
+                    'current_password' => ['Current password is incorrect'],
+                ],
+            ], 422);
+        }
+        
+
+        $user->password = bcrypt($request->new_password);
+        $user->save();
+
+        return response()->json(['message' => 'Password updated successfully'], 200);
+    }
+
+
+    public function changeProfile(Request $request)
+    {
+        $request->validate([
+            'profile' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
+        ]);
+
+        $user =  JWTAuth::user();
+
+        if ($request->hasFile('profile')) {
+            if ($user->profile) {
+                $image = $user->profile;
+                $baseUrl = url('storage/') . '/';
+                $replaceFile = str_replace($baseUrl, '', $image);
+                Storage::disk('public')->delete($replaceFile);
+            }
+            $validatedData['profile'] = uploadFile($request->profile, 'profiles');
+        }
+        $user->profile = url('storage/' . $validatedData['profile']);
+        $user->save();
+        return response()->json(['message' => 'Profile updated successfully', 'profile' => $user->profile], 200);
+    }
+
+
+    public function updateUserDetails(Request $request)
+    {
+        $request->validate([
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255|unique:users,email,',
+        ]);
+
+        $user =  JWTAuth::user();
+        if ($request->name) {
+            $user->name = $request->name;
+        }
+        if ($request->email) {
+            $user->email = $request->email;
+        }
+
+        $user->save();
+
+        return response()->json(['message' => 'User details updated successfully', 'user' => $user], 200);
     }
 }

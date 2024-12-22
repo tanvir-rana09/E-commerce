@@ -105,6 +105,7 @@ class CategoryController extends Controller
             $validated = $request->validate([
                 "name" => "sometimes|string",
                 "file" => "sometimes|image",
+                "status" => "sometimes|numeric",
                 "parent_id" => "sometimes|numeric"
             ]);
 
@@ -119,11 +120,13 @@ class CategoryController extends Controller
             }
 
             $category->update($validated);
+
             return response()->json([
                 "status" => 200,
                 "message" => "category updated successfully",
                 "data" => $category
             ], 200);
+            
         } catch (QueryException $e) {
             if ($e->getCode() === '23000') {
                 return response()->json([
