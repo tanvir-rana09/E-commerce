@@ -70,6 +70,8 @@ class VisitorController extends Controller
             ->where($dateFilter)
             ->sum('total_price');
 
+        $totalOrder = Order::count();
+
         $returningCustomers = User::with(['orders' => function ($query) use ($startDate, $endDate) {
             $query->when($startDate, function ($query) use ($startDate) {
                 $query->whereDate('created_at', '>=', $startDate);
@@ -83,11 +85,13 @@ class VisitorController extends Controller
                 return $user->orders->count() > 1;
             })->count();
 
-        // Conversion Rate (if tracking visitors)
+
+        $returningCustomersPercentage = $totalOrder > 0 ? ($returningCustomers / $totalOrder) * 100 : 0;
+
         $totalVisitors = Visitor::where($dateFilter)->count();
         $conversionRate = $totalVisitors > 0 ? ($totalOrders / $totalVisitors) * 100 : 0;
 
-        // Prepare response data
+
         $data = [
             'orders' => [
                 'total' => $totalOrders,
@@ -112,11 +116,11 @@ class VisitorController extends Controller
                 'moderators' => $moderatorUsers,
                 'editors' => $editorUsers,
             ],
-            'revenue' => $totalRevenue,
-            'returning_customers' => $returningCustomers,
+            'revenue' => $totalRevenue.' TK',
+            'returning_customers' => round($returningCustomersPercentage, 2).'%',
             'conversion_rate' => $conversionRate,
         ];
 
-        return response()->json($data, 200);
+        return response()->json(['data' => $data, 'status' => 200], 200);
     }
 }

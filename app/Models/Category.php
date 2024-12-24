@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class Category extends Model
 {
-    protected $fillable = ["name", "slug", "parent_id", "file"];
+    protected $fillable = ["name", "slug", "parent_id", "file", "status"];
     protected $appends = ['formatted_created_at'];
 
     function setNameAttribute($value)

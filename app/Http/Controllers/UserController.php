@@ -12,12 +12,12 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Facades\JWTAuth;
-
+use Illuminate\Support\Facades\Validator;
 use function App\Helpers\uploadFile;
 
 class UserController extends Controller
 {
-    //
+
     function register(AuthRequest $request)
     {
         // Validate the incoming data
@@ -49,7 +49,7 @@ class UserController extends Controller
             ], 201); // Return response with the status code
         }
 
-        
+
         return ApiResponse::sendResponse('failed', 'Failed to create user', 200);
     }
 
@@ -101,8 +101,6 @@ class UserController extends Controller
         return response()->json(['message' => "log out successfully", 'status' => 200], 200);
     }
 
-
-
     public function changePassword(Request $request)
     {
         $request->validate([
@@ -120,7 +118,7 @@ class UserController extends Controller
                 ],
             ], 422);
         }
-        
+
 
         $user->password = bcrypt($request->new_password);
         $user->save();
@@ -146,7 +144,7 @@ class UserController extends Controller
             }
             $validatedData['profile'] = uploadFile($request->profile, 'profiles');
         }
-        $user->profile = url('storage/' . $validatedData['profile']);
+        $user->profile = $validatedData['profile'];
         $user->save();
         return response()->json(['message' => 'Profile updated successfully', 'profile' => $user->profile], 200);
     }
@@ -171,4 +169,95 @@ class UserController extends Controller
 
         return response()->json(['message' => 'User details updated successfully', 'user' => $user], 200);
     }
+
+    public function getAllUsers(Request $request)
+    {
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $role = $request->query('role');
+        $search = $request->query('search');
+
+        // Query builder with filters
+        $usersQuery = User::query()
+            ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->when($role, function ($query) use ($role) {
+                $query->where('role', $role);
+            })
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('name', 'LIKE', "%$search%")
+                        ->orWhere('email', 'LIKE', "%$search%");
+                });
+            })
+            ->orderBy('created_at', 'desc');
+
+        // Use paginate to handle pagination and metadata
+        $perPage = $request->query('per_page', 10); // Default to 10 if not provided
+        $users = $usersQuery->paginate($perPage);
+
+        // Check if data is empty
+        if ($users->isEmpty()) {
+            return response()->json([
+                "status" => "success",
+                "message" => "No users found",
+                "data" => [],
+            ], 200);
+        }
+
+        return response()->json([
+            "status" => "success",
+            "total" => $users->total(),
+            "current_page" => $users->currentPage(),
+            "per_page" => $users->perPage(),
+            "total_pages" => $users->lastPage(),
+            "data" => $users->items(),
+        ], 200);
+    }
+
+    // Function to update user role
+    public function updateUserRole(Request $request, $id)
+    {
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'role' => 'required|string|in:admin,user,moderator,editor'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Find the user
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Update the role
+        $user->role = $request->input('role');
+        $user->save();
+
+        return response()->json(['message' => 'User role updated successfully', 'user' => $user], 200);
+    }
+
+    public function deleteUser($id)
+	{
+		$user = User::find($id);
+
+		if (!$user) {
+			return response()->json(['message' => 'user not found'], 404);
+		}
+
+        if ($user->profile) {
+            $image = $user->profile;
+            $baseUrl = url('storage/') . '/';
+            $replaceFile = str_replace($baseUrl, '', $image);
+            Storage::disk('public')->delete($replaceFile);
+        }
+
+		$user->delete();
+
+		return response()->json(['message' => 'user deleted successfully', 'status' => 200]);
+	}
 }

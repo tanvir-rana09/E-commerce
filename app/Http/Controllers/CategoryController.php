@@ -16,6 +16,7 @@ class CategoryController extends Controller
         try {
             $validated = $request->validate([
                 "name" => "string|required",
+                "status" => "string|nullable",
                 "parent_id" => "numeric",
                 'file' => 'required|image',
             ]);
@@ -23,7 +24,8 @@ class CategoryController extends Controller
 
             $catgory = Category::create([
                 'name' => $validated['name'],
-                'file' => $validated['file']
+                'file' => $validated['file'],
+                'status' => $validated['status']
             ]);
             if (!empty($validated["parent_id"])) {
                 $catgory->parent_id = $validated["parent_id"];
@@ -126,7 +128,6 @@ class CategoryController extends Controller
                 "message" => "category updated successfully",
                 "data" => $category
             ], 200);
-            
         } catch (QueryException $e) {
             if ($e->getCode() === '23000') {
                 return response()->json([

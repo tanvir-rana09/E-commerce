@@ -10,7 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 class User extends Authenticatable implements JWTSubject
 {
     use HasFactory;
-    protected $fillable = ["name", "email", "password", "token"];
+    protected $fillable = ["name", "email", "password", "token","profile"];
     protected $hidden = ["password",];
     public function getJWTIdentifier()
     {
@@ -25,6 +25,10 @@ class User extends Authenticatable implements JWTSubject
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+    public function getProfileAttribute($value)
+    {
+        return url('storage/' . $value);
     }
     
 }
