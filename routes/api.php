@@ -26,18 +26,23 @@ Route::middleware(["auth:api"])->prefix("auth")->group(function () {
     Route::put("/update-details", [UserController::class, "updateUserDetails"]);
     Route::put("/update-password", [UserController::class, "changePassword"]);
 });
+Route::middleware(["auth:api"])->prefix("users")->group(function () {
+    Route::get("/all-users", [UserController::class, "getAllUsers"])->middleware(['checkUserRole:moderator,editor,admin']);
+    Route::put("/update-role/{id}", [UserController::class, "updateUserRole"])->middleware(['role:admin']);
+    Route::delete("/delete/{id}", [UserController::class, "deleteUser"])->middleware(['role:admin']);
+});
 
-// product crud operation route
+
 Route::middleware(["auth:api"])->prefix("product")->group(function () {
     Route::get("/", [ProductController::class, "getAllProducts"]);
     Route::get("/comments/{id}", [ProductController::class, "productComments"]);
-    Route::post("/add", [ProductController::class, "addProduct"]);
-    Route::put("/update/{id}", [ProductController::class, "updateProduct"]);
-    Route::delete("/delete/{id}", [ProductController::class, "deleteProduct"]);
+    Route::post("/add", [ProductController::class, "addProduct"])->middleware(['checkUserRole:moderator,editor,admin']);
+    Route::put("/update/{id}", [ProductController::class, "updateProduct"])->middleware(['checkUserRole:moderator,editor,admin']);
+    Route::delete("/delete/{id}", [ProductController::class, "deleteProduct"])->middleware(['role:admin']);
 });
 
 // category crud operation route
-Route::middleware(["auth:api"])->prefix("category")->group(function () {
+Route::middleware(["auth:api",'checkUserRole:moderator,editor,admin'])->prefix("category")->group(function () {
     Route::get("/", [CategoryController::class, "getAllCategories"]);
     Route::post("/add", [CategoryController::class, "addCategory"]);
     Route::put("/update/{id}", [CategoryController::class, "updateCategory"]);
@@ -62,7 +67,7 @@ Route::middleware(["auth:api"])->prefix("comment")->group(function () {
 
 
 // category blog operation route
-Route::middleware(["auth:api"])->prefix("section")->group(function () {
+Route::middleware(["auth:api","checkUserRole:moderator,editor,admin"])->prefix("section")->group(function () {
     Route::get("/", [SectionController::class, "getAllSections"]);
     Route::post("/add", [SectionController::class, "addSection"]);
     Route::put("/update/{id}", [SectionController::class, "updateSection"]);
@@ -70,7 +75,7 @@ Route::middleware(["auth:api"])->prefix("section")->group(function () {
 });
 
 // category blog operation route
-Route::middleware(["auth:api"])->prefix("order")->group(function () {
+Route::middleware(["auth:api","checkUserRole:moderator,editor,admin"])->prefix("order")->group(function () {
     Route::get("/product/{id?}", [OrderController::class, "orderedItems"]);
     Route::get("/{id?}", [OrderController::class, "userOrders"]);
     Route::post("/create", [OrderController::class, "createOrder"]);
@@ -86,6 +91,6 @@ Route::middleware(["auth:api"])->prefix("order")->group(function () {
 });
 Route::middleware(["auth:api"])->group(function () {
     Route::get('/site-settings', [SiteSettingController::class, 'getAllSettings']);
-    Route::post('/site-settings', [SiteSettingController::class, 'updateSettings']);
+    Route::post('/site-settings', [SiteSettingController::class, 'updateSettings'])->middleware(['role:admin']);
     Route::get('/statistics', [VisitorController::class, 'statistics']);
 });

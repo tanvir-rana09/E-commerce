@@ -118,7 +118,7 @@ class VisitorController extends Controller
             ],
             'revenue' => $totalRevenue.' TK',
             'returning_customers' => round($returningCustomersPercentage, 2).'%',
-            'conversion_rate' => $conversionRate,
+            'conversion_rate' => round($conversionRate,2).'%',
         ];
 
         return response()->json(['data' => $data, 'status' => 200], 200);

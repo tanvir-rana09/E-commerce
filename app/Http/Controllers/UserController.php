@@ -216,7 +216,7 @@ class UserController extends Controller
         ], 200);
     }
 
-    // Function to update user role
+   
     public function updateUserRole(Request $request, $id)
     {
         // Validate the request
@@ -238,16 +238,20 @@ class UserController extends Controller
         $user->role = $request->input('role');
         $user->save();
 
-        return response()->json(['message' => 'User role updated successfully', 'user' => $user], 200);
+        return response()->json(['message' => 'User role updated successfully', 'user' => $user,'status'=>200], 200);
     }
 
     public function deleteUser($id)
 	{
 		$user = User::find($id);
-
+        $loginUser =  JWTAuth::user();
 		if (!$user) {
 			return response()->json(['message' => 'user not found'], 404);
 		}
+
+        if ($loginUser->id == $user->id) {
+            return response()->json(['message' => 'You can not delete yourself', 'status' => 403]);
+        }
 
         if ($user->profile) {
             $image = $user->profile;
@@ -257,7 +261,6 @@ class UserController extends Controller
         }
 
 		$user->delete();
-
 		return response()->json(['message' => 'user deleted successfully', 'status' => 200]);
 	}
 }

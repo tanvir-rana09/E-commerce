@@ -79,7 +79,7 @@ class OrderController extends Controller
 					'product_id' => $product['product_id'],
 					'quantity' => $product['quantity'],
 					'price' => $productModel['price'],
-					'total_price' => $productModel['price']* $product['quantity'],
+					'total_price' => $productModel['price'] * $product['quantity'],
 				]);
 				$productModel->decrement('stock', $product['quantity']);
 			}
@@ -144,35 +144,32 @@ class OrderController extends Controller
 	public function cancelOrder($id)
 	{
 		$order = Order::find($id);
-	
+
 		if (!$order) {
 			return response()->json(['message' => 'Order not found'], 404);
 		}
-	
+
 		// Prevent cancellation if the order is delivered
 		if ($order->delivery_status === 'delivered') {
 			return response()->json(['message' => 'Delivered orders cannot be canceled'], 400);
 		}
-	
+
 		// Check if the authenticated user owns the order
 		if ($order->user_id != JWTAuth::id()) {
 			return response()->json(['message' => 'Unauthorized'], 403);
 		}
-	
+
 		// Update the delivery_status and status
 		$order->delivery_status = 'canceled';
 		$order->status = 'canceled'; // Update overall status to reflect cancellation
 		$order->save();
-	
+
 		return response()->json([
 			'message' => 'Order canceled successfully',
 			'order' => $order, // Return the updated order details
 		], 200);
 	}
-	
 
-
-	// admin function -------------------------->
 
 	function Allorders(Request $request)
 	{
@@ -250,8 +247,30 @@ class OrderController extends Controller
 			$order->status = 'payment_failed';
 		} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'delivered') {
 			$order->status = 'completed';
+			foreach ($order->products as $product) {
+				$orderItem = OrderItems::find($product['product_id']);
+				$orderItem->status = 'delivered';
+				if ($orderItem->status == 'delivered') {
+					$product = Product::find($orderItem['product_id']);
+					$product->increment('sells', $product['quantity']);
+				}
+			}
+		}elseif ($order->payment_status === 'pending' && $order->delivery_status === 'delivered') {
+			$order->status = 'awaiting_payment';
+			foreach ($order->products as $product) {
+				$orderItem = OrderItems::find($product['product_id']);
+				$orderItem->status = 'delivered';
+				if ($orderItem->status == 'delivered') {
+					$product = Product::find($orderItem['product_id']);
+					$product->increment('sells', $product['quantity']);
+				}
+			}
 		} elseif ($order->delivery_status === 'canceled') {
 			$order->status = 'canceled';
+			foreach ($order->products as $product) {
+				$orderItem = OrderItems::find($product['product_id']);
+				$orderItem->status = 'canceled';
+			}
 		} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'pending') {
 			$order->status = 'awaiting_delivery';
 		} elseif ($order->payment_status === 'pending' && $order->delivery_status === 'pending') {
@@ -270,7 +289,6 @@ class OrderController extends Controller
 	}
 
 
-
 	public function adminDestroy($id)
 	{
 		$order = Order::find($id);
@@ -278,6 +296,11 @@ class OrderController extends Controller
 		if (!$order) {
 			return response()->json(['message' => 'Order not found'], 404);
 		}
+
+		array_map(function ($item) {
+			$product = Product::find($item['product_id']);
+			$product->decrement('sells', $item['quantity']);
+		}, $order->products);
 
 		$order->delete();
 

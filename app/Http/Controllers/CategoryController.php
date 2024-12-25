@@ -25,7 +25,7 @@ class CategoryController extends Controller
             $catgory = Category::create([
                 'name' => $validated['name'],
                 'file' => $validated['file'],
-                'status' => $validated['status']
+                'status' => $validated['status'],
             ]);
             if (!empty($validated["parent_id"])) {
                 $catgory->parent_id = $validated["parent_id"];

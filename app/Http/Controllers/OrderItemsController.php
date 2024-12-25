@@ -33,7 +33,6 @@ class OrderItemsController extends Controller
     public function cancelOrderItem(Request $request, $id)
     {
         $orderItem = OrderItems::find($id);
-
         if (!$orderItem) {
             return response()->json([
                 "status" => "failed",
@@ -51,21 +50,21 @@ class OrderItemsController extends Controller
                 "message" => "Unauthorized"
             ], 403);
         }
-
-
-        if ($orderItem->status == 'delivered') {
+return $order->order;
+        if ($order->order->delivery_status == 'delivered') {
             return response()->json([
                 "status" => "failed",
-                "message" => "Delivered items cannot be canceled"
-            ], 400);
+                "status" => 400,
+                "message" => "Delivered items cannot be ".$request->status
+            ], 200);
         }
 
-        $orderItem->status = 'canceled';
+        $orderItem->status = $request->status;
         $orderItem->save();
 
         return response()->json([
             "status" => 200,
-            "message" => "Order item canceled successfully",
+            "message" => "Order item update status successfully",
             "orderItem" => $orderItem
         ]);
     }
