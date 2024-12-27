@@ -22,8 +22,8 @@ return new class extends Migration
             $table->unsignedInteger('shipping_cost')->default(0); 
             $table->json('shipping_address'); 
             $table->string('payment_method'); 
-            $table->string('payment_number'); 
-            $table->string('trx_id'); 
+            $table->string('payment_number')->nullable(); 
+            $table->string('trx_id')->nullable(); 
             $table->string('coupon_code')->nullable();
             $table->string('status')->default('pending');
             $table->string('payment_status')->default('pending'); 

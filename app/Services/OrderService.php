@@ -1,5 +1,9 @@
 <?php
+
 namespace App\Services;
+
+use App\Models\Coupon;
+
 class OrderService
 {
 	public function prepareOrder($request)
@@ -22,22 +26,42 @@ class OrderService
 			'trx_id' => $request->trx_id,
 			'payment_status' => $request->payment_status,
 			'coupon_code' => $request->coupon_code,
-			'delivery_status' => $request->delivery_status,
 			'order_notes' => $request->order_notes,
 		];
 	}
 
 	private function calculateSubtotal($products)
 	{
+		$productIds = collect($products)->pluck('product_id');
+		$dbProducts = \App\Models\Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+		// Calculate subtotal
+		$subtotal = 0;
+		foreach ($products as $product) {
+			$price = $dbProducts[$product['product_id']]->discount_price ?? 0;
+			$subtotal += $price * $product['quantity'];
+		}
+
+		return $subtotal;
 		return collect($products)->sum(fn($p) => $p['quantity'] * $p['price']);
 	}
 	private function calculateDiscount($subtotal, $coupon)
 	{
+		if (!$coupon) {
+			return 0;
+		}
+
+		$couponDetails = Coupon::where('code', $coupon)->first();
+
+		if ($couponDetails) {
+			return ($couponDetails->discount / 100) * $subtotal;
+		}
+
 		return 0;
 	}
 	private function calculateShipping($shipping_address)
 	{
-		if ($shipping_address['division'] === 'dhaka') {
+		if (str_contains(strtolower($shipping_address['division']), 'dhaka')) {
 			# code...
 			return 50;
 		} else return 100;

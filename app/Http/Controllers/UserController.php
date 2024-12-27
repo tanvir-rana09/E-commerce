@@ -221,7 +221,7 @@ class UserController extends Controller
     {
         // Validate the request
         $validator = Validator::make($request->all(), [
-            'role' => 'required|string|in:admin,user,moderator,editor'
+            'role' => 'required|string|in:admin,user,moderator,reader'
         ]);
 
         if ($validator->fails()) {

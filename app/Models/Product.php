@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-use function PHPSTORM_META\map;
+use function PHPUnit\Framework\isEmpty;
 
 class Product extends Model
 {
@@ -30,7 +30,7 @@ class Product extends Model
     protected $casts = [
         'size' => 'array',
     ];
-    
+    protected $appends = ['discount_price'];
 
     public function setNameAttribute($value)
     {
@@ -51,6 +51,36 @@ class Product extends Model
         return [];
     }
 
+    public function getDiscountPriceAttribute()
+    {
+        $totalDiscount = 0;
+        $discount = Discount::where('is_active', 1)
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->where('type', 'single')->where('product_id', $this->id);
+                })
+                    ->orWhere(function ($q) {
+                        $q->where('type', 'category')->where('category_id', $this->category_id);
+                    })
+                    ->orWhere('type', 'global');
+            })
+            ->orderByDesc('discount_percentage')
+            ->first();
+
+        if ($discount) {
+            $totalDiscount += $discount->discount_percentage;
+        }
+
+        if ($this->discount) {
+            $totalDiscount += $this->discount;
+        }
+
+        if ($totalDiscount > 0) {
+            return round($this->price * (1 - ($totalDiscount / 100)), 2);
+        }
+
+        return $this->price;
+    }
 
 
     public function getBannerAttribute($value)

@@ -61,6 +61,9 @@ class CategoryController extends Controller
         if (!empty($query['name'])) {
             $categories->where("name", "like", "%" . $query['name'] . "%");
         }
+        if (!empty($query['status'])) {
+            $categories->where("status", $query['status']);
+        }
         if (!empty($query['parent_id'])) {
             $categories->find($query['parent_id']);
         }

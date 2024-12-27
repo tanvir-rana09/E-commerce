@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderItems;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -50,7 +51,7 @@ class OrderItemsController extends Controller
                 "message" => "Unauthorized"
             ], 403);
         }
-return $order->order;
+
         if ($order->order->delivery_status == 'delivered') {
             return response()->json([
                 "status" => "failed",
@@ -61,7 +62,10 @@ return $order->order;
 
         $orderItem->status = $request->status;
         $orderItem->save();
-
+        $product = Product::find($orderItem['product_id']);
+        if ($request->status == 'canceled') {
+            $product->increment('stock', $product['quantity']);
+        }
         return response()->json([
             "status" => 200,
             "message" => "Order item update status successfully",

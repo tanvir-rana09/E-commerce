@@ -63,7 +63,7 @@ class VisitorController extends Controller
         $totalUsers = User::where($dateFilter)->count();
         $adminUsers = User::where('role', 'admin')->where($dateFilter)->count();
         $moderatorUsers = User::where('role', 'moderator')->where($dateFilter)->count();
-        $editorUsers = User::where('role', 'editor')->where($dateFilter)->count();
+        $readerUsers = User::where('role', 'reader')->where($dateFilter)->count();
 
 
         $totalRevenue = Order::where('status', 'completed')
@@ -114,7 +114,7 @@ class VisitorController extends Controller
                 'total' => $totalUsers,
                 'admins' => $adminUsers,
                 'moderators' => $moderatorUsers,
-                'editors' => $editorUsers,
+                'readers' => $readerUsers,
             ],
             'revenue' => $totalRevenue.' TK',
             'returning_customers' => round($returningCustomersPercentage, 2).'%',

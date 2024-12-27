@@ -30,11 +30,6 @@ class OrderController extends Controller
 				'products.*.product_id' => 'required|exists:products,id',
 				'products.*.quantity' => 'required|integer|min:1',
 				'products.*.price' => 'required|integer|min:0',
-				'total_items' => 'required|integer|min:1',
-				'subtotal' => 'integer|min:0',
-				'total_price' => 'integer|min:0',
-				'discount_amount' => 'integer|min:0',
-				'shipping_cost' => 'integer|min:0',
 				'shipping_address' => 'required|array',
 				'shipping_address.address' => 'required|string|max:255',
 				'shipping_address.name' => 'required|string|max:255',
@@ -43,12 +38,11 @@ class OrderController extends Controller
 				'shipping_address.city' => 'required|string|max:100',
 				'shipping_address.division' => 'required|string|max:100',
 				'shipping_address.postal_code' => 'required|string|max:10',
-				'payment_method' => 'required|string|in:bkash,rocket,cash_on_delivery',
+				'payment_method' => 'required|string|in:bkash,rocket,nagad,cash_on_delivery',
 				'payment_number' => 'string|max:20',
 				'trx_id' => 'string|max:50',
 				'payment_status' => 'required|string|in:pending,successful,failed',
 				'coupon_code' => 'nullable|string|max:20',
-				'delivery_status' => 'required|string|in:pending,confirmed,delivered,canceled',
 				'order_notes' => 'nullable|string|max:500',
 			]);
 
@@ -73,13 +67,12 @@ class OrderController extends Controller
 					], 404);
 				}
 
-				// Create order item and update stock
 				OrderItems::create([
 					'order_id' => $order->id,
 					'product_id' => $product['product_id'],
 					'quantity' => $product['quantity'],
-					'price' => $productModel['price'],
-					'total_price' => $productModel['price'] * $product['quantity'],
+					'price' => $productModel['discount_price'],
+					'total_price' => $productModel['discount_price'] * $product['quantity'],
 				]);
 				$productModel->decrement('stock', $product['quantity']);
 			}
@@ -225,7 +218,6 @@ class OrderController extends Controller
 		return response()->json($order);
 	}
 
-
 	public function adminOrderUpdate(Request $request, $id)
 	{
 		$order = Order::find($id);
@@ -235,75 +227,112 @@ class OrderController extends Controller
 		}
 
 		$validatedData = $request->validate([
-			'payment_status' => 'sometimes|in:pending,successful,failed',
-			'delivery_status' => 'sometimes|in:pending,confirmed,delivered,canceled',
+			'payment_status' => 'nullable|in:pending,successful,failed,canceled',
+			'delivery_status' => 'nullable|in:pending,confirmed,delivered,canceled',
 		]);
 
-		// Update the payment_status and delivery_status
-		$order->update($validatedData);
+		DB::beginTransaction();
 
-		// Determine the overall status based on payment_status and delivery_status
-		if ($order->payment_status === 'failed') {
-			$order->status = 'payment_failed';
-		} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'delivered') {
-			$order->status = 'completed';
-			foreach ($order->products as $product) {
-				$orderItem = OrderItems::find($product['product_id']);
-				$orderItem->status = 'delivered';
-				if ($orderItem->status == 'delivered') {
-					$product = Product::find($orderItem['product_id']);
-					$product->increment('sells', $product['quantity']);
-				}
+		try {
+			$order->update($validatedData);
+
+			// Determine the overall status
+			if ($order->payment_status === 'failed') {
+				$order->status = 'payment_failed';
+			} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'delivered') {
+				$order->status = 'completed';
+				$this->updateOrderItems($order, 'delivered', true);
+			} elseif ($order->payment_status === 'pending' && $order->delivery_status === 'delivered') {
+				$order->status = 'awaiting_payment';
+				$this->updateOrderItems($order, 'delivered');
+			} elseif ($order->delivery_status === 'canceled' && $order->payment_status === 'canceled') {
+				$order->status = 'canceled';
+				$this->updateOrderItems($order, 'canceled', false);
+			} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'pending') {
+				$order->status = 'awaiting_delivery';
+			} elseif ($order->payment_status === 'pending' && $order->delivery_status === 'pending') {
+				$order->status = 'pending';
+			} else {
+				$order->status = 'processing';
 			}
-		}elseif ($order->payment_status === 'pending' && $order->delivery_status === 'delivered') {
-			$order->status = 'awaiting_payment';
-			foreach ($order->products as $product) {
-				$orderItem = OrderItems::find($product['product_id']);
-				$orderItem->status = 'delivered';
-				if ($orderItem->status == 'delivered') {
-					$product = Product::find($orderItem['product_id']);
-					$product->increment('sells', $product['quantity']);
-				}
-			}
-		} elseif ($order->delivery_status === 'canceled') {
-			$order->status = 'canceled';
-			foreach ($order->products as $product) {
-				$orderItem = OrderItems::find($product['product_id']);
-				$orderItem->status = 'canceled';
-			}
-		} elseif ($order->payment_status === 'successful' && $order->delivery_status === 'pending') {
-			$order->status = 'awaiting_delivery';
-		} elseif ($order->payment_status === 'pending' && $order->delivery_status === 'pending') {
-			$order->status = 'pending';
-		} else {
-			$order->status = 'processing';
+
+			$order->save();
+			DB::commit();
+
+			return response()->json([
+				'message' => 'Order updated successfully',
+				'order' => $order,
+				'status' => 200
+			]);
+		} catch (\Exception $e) {
+			DB::rollBack();
+			return response()->json(['message' => 'Order update failed', 'error' => $e->getMessage()], 500);
 		}
-
-		$order->save();
-
-		return response()->json([
-			'message' => 'Order updated successfully',
-			'order' => $order,
-			'status' => 200
-		]);
 	}
+
+	private function updateOrderItems($order, $status, $updateInventory = false)
+	{
+		foreach ($order->products as $product) {
+			$orderItem = OrderItems::where('product_id', $product['product_id'])->first();
+
+			if ($orderItem) {
+				$orderItem->status = $status;
+				$orderItem->save();
+
+				if ($updateInventory) {
+					$productModel = Product::find($orderItem->product_id);
+					if ($productModel) {
+						$productModel->increment('sells', $product['quantity']);
+					}
+				} elseif ($status == 'canceled') {
+					$productModel = Product::find($orderItem->product_id);
+					if ($productModel) {
+						$productModel->decrement('sells', $product['quantity']);
+						$productModel->increment('stock', $product['quantity']);
+					}
+				}
+			}
+		}
+	}
+
 
 
 	public function adminDestroy($id)
 	{
-		$order = Order::find($id);
+		DB::beginTransaction();
 
-		if (!$order) {
-			return response()->json(['message' => 'Order not found'], 404);
+		try {
+			// Fetch the order along with its related items
+			$order = Order::find($id);
+
+			if (!$order) {
+				return response()->json(['message' => 'Order not found'], 404);
+			}
+
+			foreach ($order->products as $product) {
+				$orderItem = OrderItems::where('product_id', $product['product_id'])->first();
+
+				if ($orderItem) {
+					$productModel = Product::find($orderItem->product_id);
+					if ($productModel) {
+						$productModel->increment('stock', $product['quantity']);
+						$productModel->decrement('sells', $product['quantity']);
+					}
+				}
+			}
+
+
+			// Delete the order
+			$order->delete();
+
+			// Commit transaction
+			DB::commit();
+
+			return response()->json(['message' => 'Order deleted successfully', 'status' => 200]);
+		} catch (\Exception $e) {
+			// Rollback on failure
+			DB::rollBack();
+			return response()->json(['message' => 'Failed to delete order', 'error' => $e->getMessage()], 500);
 		}
-
-		array_map(function ($item) {
-			$product = Product::find($item['product_id']);
-			$product->decrement('sells', $item['quantity']);
-		}, $order->products);
-
-		$order->delete();
-
-		return response()->json(['message' => 'Order deleted successfully', 'status' => 200]);
 	}
 }
