@@ -19,8 +19,11 @@ Route::post("/register", [UserController::class, "register"]);
 Route::post("/login", [UserController::class, "login"]);
 Route::post('/track-visit', [VisitorController::class, 'trackVisit']);
 Route::get('/visit-count', [VisitorController::class, 'getVisitCount']);
+Route::get('/site-settings', [SiteSettingController::class, 'getAllSettings']);
+Route::get("/category", [CategoryController::class, "getAllCategories"]);
+Route::get('/category/ids-names', [CategoryController::class, 'getCategoryIdsAndNames']);
+Route::get("/section", [SectionController::class, "getAllSections"]);
 
-// user route
 Route::middleware(["auth:api"])->prefix("auth")->group(function () {
     Route::get("/profile", [UserController::class, "profile"]);
     Route::get("/logout", [UserController::class, "logout"]);
@@ -36,6 +39,7 @@ Route::middleware(["auth:api"])->prefix("users")->group(function () {
 
 
 Route::middleware(["auth:api"])->prefix("product")->group(function () {
+    Route::get('/ids-names', [ProductController::class, 'getProductIdsAndNames']);
     Route::get("/", [ProductController::class, "getAllProducts"]);
     Route::get("/comments/{id}", [ProductController::class, "productComments"]);
     Route::post("/add", [ProductController::class, "addProduct"])->middleware(['checkUserRole:moderator,reader,admin']);
@@ -43,12 +47,12 @@ Route::middleware(["auth:api"])->prefix("product")->group(function () {
     Route::delete("/delete/{id}", [ProductController::class, "deleteProduct"])->middleware(['role:admin']);
 });
 
-// category crud operation route
+
 Route::middleware(["auth:api",'checkUserRole:moderator,reader,admin'])->prefix("category")->group(function () {
-    Route::get("/", [CategoryController::class, "getAllCategories"]);
     Route::post("/add", [CategoryController::class, "addCategory"]);
     Route::put("/update/{id}", [CategoryController::class, "updateCategory"]);
     Route::delete("/delete/{id}", [CategoryController::class, "deleteCategory"]);
+
 });
 
 // category blog operation route
@@ -70,7 +74,6 @@ Route::middleware(["auth:api"])->prefix("comment")->group(function () {
 
 // category blog operation route
 Route::middleware(["auth:api","checkUserRole:moderator,reader,admin"])->prefix("section")->group(function () {
-    Route::get("/", [SectionController::class, "getAllSections"]);
     Route::post("/add", [SectionController::class, "addSection"]);
     Route::put("/update/{id}", [SectionController::class, "updateSection"]);
     Route::delete("/delete/{id}", [SectionController::class, "deleteSection"]);
@@ -94,7 +97,6 @@ Route::middleware(["auth:api"])->prefix("order")->group(function () {
 
 
 Route::middleware(["auth:api"])->group(function () {
-    Route::get('/site-settings', [SiteSettingController::class, 'getAllSettings'])->middleware(['checkUserRole:moderator,reader,admin']);
     Route::post('/site-settings', [SiteSettingController::class, 'updateSettings'])->middleware(['role:admin']);
     Route::get('/statistics', [VisitorController::class, 'statistics'])->middleware(['checkUserRole:moderator,reader,admin']);
 });
@@ -108,7 +110,7 @@ Route::middleware(["auth:api"])->prefix('coupons')->group(function () {
 });
 
 Route::middleware(["auth:api"])->prefix('discounts')->group(function () {
-    Route::post('/set', [DiscountController::class, 'setDiscount'])->middleware(['checkUserRole:moderator,reader,admin']);
-    Route::delete('/remove/{id}', [DiscountController::class, 'removeDiscount'])->middleware(['checkUserRole:moderator,reader,admin']);
+    Route::post('/add', [DiscountController::class, 'setDiscount'])->middleware(['checkUserRole:moderator,reader,admin']);
+    Route::delete('/{id}', [DiscountController::class, 'removeDiscount'])->middleware(['checkUserRole:moderator,reader,admin']);
     Route::get('/', [DiscountController::class, 'getDiscounts']);
 });

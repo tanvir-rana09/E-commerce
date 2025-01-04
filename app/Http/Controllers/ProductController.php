@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use function App\Helpers\uploadFile;
+use function PHPUnit\Framework\isEmpty;
 
 class ProductController extends Controller
 {
@@ -18,12 +19,12 @@ class ProductController extends Controller
 
         try {
             $validated = $request->validate([
-                "name" => "required|min:3",
+                "name" => "required|min:3|unique:products,name",
                 "price" => "numeric|required",
-                "discount" => "sometimes|numeric",
-                "stock" => "numeric|required",
-                "category_id" => "required|numeric",
-                "subcategory_id" => "numeric",
+                "discount" => "sometimes|numeric|min:1|max:99",
+                "stock" => "numeric|required|min:1",
+                "category_id" => "required|numeric|exists:categories,id",
+                "subcategory_id" => "numeric|exists:categories,id",
                 'images' => 'array',
                 'size' => 'array',
                 'images.*' => 'image',
@@ -55,7 +56,7 @@ class ProductController extends Controller
                 $this->bannerPath = uploadFile($requestBanner, "products");
                 $validated['banner'] = $this->bannerPath; // Store banner path
             }
-            $validated['sku'] =strtoupper(Str::random(8));;
+            $validated['sku'] = strtoupper(Str::random(8));;
             $product = Product::create($validated);
 
             return response()->json([
@@ -184,11 +185,6 @@ class ProductController extends Controller
         ], 200);
     }
 
-
-
-
-
-
     function updateProduct($id, Request $request)
     {
         try {
@@ -196,6 +192,7 @@ class ProductController extends Controller
             if (!$product) {
                 return response()->json(["status" => "failed", "message" => "product not found with this id $id"], 404);
             }
+            $baseUrl = url('storage/') . '/';
 
             $validated = $request->validate([
                 "name" => "sometimes|min:3",
@@ -213,11 +210,20 @@ class ProductController extends Controller
                 'status' => 'numeric|sometimes',
             ]);
 
+            if (isEmpty($request->input('images'))) {
+                $oldImagesUrl = $product->images ?? [];
+
+                $oldImages = array_map(function ($image) use ($baseUrl) {
+                    return str_replace($baseUrl, '', $image);
+                }, $oldImagesUrl ?? []);
+                Storage::disk('public')->delete($oldImages);
+                $validated['images'] = '';
+            }
+
             if ($request->has('images')) {
                 $newImages = [];
 
                 if ($request->input("images")) {
-                    $baseUrl = url('storage/') . '/';
 
                     $newImagesWithUrl = $request->input("images");
                     $newImages = array_map(function ($image) use ($baseUrl) {
@@ -242,9 +248,10 @@ class ProductController extends Controller
 
             // Process banner if provided
             if ($request->hasFile("banner")) {
-                // Delete old banner if present
                 if ($product->banner) {
-                    Storage::disk("public")->delete($product->banner);
+                    $image = $product->banner;
+                    $oldImage = str_replace($baseUrl, '', $image);
+                    Storage::disk("public")->delete($oldImage);
                 }
                 $bannerPath = uploadFile($request->file("banner"), "products");
                 $validated['banner'] = $bannerPath;
@@ -294,5 +301,21 @@ class ProductController extends Controller
             "status" => 200,
             "message" => "Product deleted successfully"
         ], 200);
+    }
+
+    public function getProductIdsAndNames(Request $request)
+    {
+        $status = $request->query('status');
+        $products = Product::select('id', 'name', 'banner', 'discount', 'images')
+            ->when($status, function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return response()->json([
+            'data' => $products,
+            'status' => 200
+        ]);
     }
 }

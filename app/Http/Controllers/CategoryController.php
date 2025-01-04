@@ -17,7 +17,7 @@ class CategoryController extends Controller
             $validated = $request->validate([
                 "name" => "string|required",
                 "status" => "string|nullable",
-                "parent_id" => "numeric",
+                "parent_id" => "exists:categories,id|numeric",
                 'file' => 'required|image',
             ]);
             $validated['file'] = uploadFile($request->file('file'), 'category');
@@ -170,5 +170,26 @@ class CategoryController extends Controller
             "status" => "success",
             "message" => "category deleted successfully"
         ], 200);
+    }
+
+    public function getCategoryIdsAndNames(Request $request)
+    {
+
+        $status = $request->query('status');
+        $parentId = $request->query('parent_id');
+        $categories = Category::select('id', 'name', 'created_at','file')
+            ->when($status, function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->when($parentId, function ($query) use ($parentId) {
+                $query->find($parentId);
+            })
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return response()->json([
+            'data' => $categories,
+            'status' => 200
+        ]);
     }
 }

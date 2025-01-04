@@ -9,6 +9,7 @@ use App\Models\SiteSetting;
 use Illuminate\Support\Facades\Storage;
 
 use function App\Helpers\uploadFile;
+use function PHPUnit\Framework\isEmpty;
 
 class SiteSettingController extends Controller
 {
@@ -17,8 +18,9 @@ class SiteSettingController extends Controller
         $validationRules = [
             'site_name' => 'nullable|string|max:255',
             'site_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240',
+            'favicon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240',
             'contact_email' => 'nullable|email|max:255',
-            'contact_number' => 'nullable|string|max:50',
+            'contact_number' => 'nullable|string|max:15',
             'contact_address' => 'nullable|string|max:255',
             'footer_title' => 'nullable|string|max:255',
             'footer_description' => 'nullable|string',
@@ -35,19 +37,27 @@ class SiteSettingController extends Controller
 
         $uploadedFilePath = null;
 
-        if ($request->hasFile('site_logo')) {
-            // Retrieve the current site logo from the database
-            $currentLogo = SiteSetting::where('key', 'site_logo')->value('value');
 
-            // Delete the old logo file if it exists
+
+        if ($request->hasFile('site_logo')) {
+            $currentLogo = SiteSetting::where('key', 'site_logo')->value('value');
             if ($currentLogo) {
                 $baseUrl = url('storage/') . '/';
                 $fileToDelete = str_replace($baseUrl, '', $currentLogo);
                 Storage::disk('public')->delete($fileToDelete);
             }
             $uploadedFilePath = uploadFile($request->file('site_logo'), 'settings');
-
             $validatedData['site_logo'] = $uploadedFilePath;
+        }
+        if ($request->hasFile('favicon')) {
+            $currentLogo = SiteSetting::where('key', 'favicon')->value('value');
+            if ($currentLogo) {
+                $baseUrl = url('storage/') . '/';
+                $fileToDelete = str_replace($baseUrl, '', $currentLogo);
+                Storage::disk('public')->delete($fileToDelete);
+            }
+            $uploadedFilePath = uploadFile($request->file('favicon'), 'settings');
+            $validatedData['favicon'] = $uploadedFilePath;
         }
 
         DB::beginTransaction();
@@ -89,13 +99,16 @@ class SiteSettingController extends Controller
     public function getAllSettings()
     {
         try {
-            $settings = Cache::remember('site_settings', 3600, function () {
-                return SiteSetting::pluck('value', 'key')->map(function ($value) {
+            $settings = SiteSetting::pluck('value', 'key')->map(function ($value) {
                     $decoded = json_decode($value, true);
                     return $decoded !== null ? $decoded : $value;
                 });
-            });
-            $settings['site_logo'] = url('storage/' .  $settings['site_logo']);
+            if ($settings['site_logo']) {
+                $settings['site_logo'] = url('storage/' .  $settings['site_logo']);
+            }
+            if (isset($settings['favicon']) && !empty($settings['favicon'])) {
+                $settings['favicon'] = url('storage/' . $settings['favicon']);
+            }
             return response()->json(['data' => $settings, 'status' => 200], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch site settings.', 'data' => $e], 500);

@@ -9,17 +9,16 @@ use function App\Helpers\uploadFile;
 
 class SectionController extends Controller
 {
-    /**
-     * Add a new section.
-     */
+
     public function addSection(Request $request)
     {
         $validatedData = $request->validate([
-            'name' => 'required|string|unique:sections,name',
+            'name' => 'required|string',
+            'title' => 'nullable|string|unique:sections,title',
             'file' => 'required|image',
-            'description' => 'required|string',
+            'description' => 'nullable|string',
             'button_text' => 'nullable|string|max:255',
-            'button_link' => 'nullable',
+            'button_link' => 'nullable|string',
         ]);
 
         $validatedData['file'] = uploadFile($request->file('file'), 'sections');
@@ -52,8 +51,11 @@ class SectionController extends Controller
         $sectionsQuery = Section::query();
 
         // Apply filtering
+        if (!empty($query['title'])) {
+            $sectionsQuery->where('title', 'like', "%{$query['title']}%");
+        }
         if (!empty($query['name'])) {
-            $sectionsQuery->where('name', 'like', "%{$query['name']}%");
+            $sectionsQuery->where('name', $query['name']);
         }
         if (!empty($query['id'])) {
             $sectionsQuery->where('id', $query['id']);
@@ -91,6 +93,7 @@ class SectionController extends Controller
 
         $validatedData = $request->validate([
             'name' => "sometimes|string",
+            'title' => "sometimes|string|unique:sections,title",
             'file' => 'sometimes|file',
             'description' => 'sometimes|string',
             'button_text' => 'sometimes|string|max:255',

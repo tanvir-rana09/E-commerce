@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Coupon;
+use Carbon\Carbon;
 
 class OrderService
 {
@@ -45,6 +46,8 @@ class OrderService
 		return $subtotal;
 		return collect($products)->sum(fn($p) => $p['quantity'] * $p['price']);
 	}
+
+
 	private function calculateDiscount($subtotal, $coupon)
 	{
 		if (!$coupon) {
@@ -54,11 +57,20 @@ class OrderService
 		$couponDetails = Coupon::where('code', $coupon)->first();
 
 		if ($couponDetails) {
+			$currentDate = now();
+			$expireDate = Carbon::parse($couponDetails->expires_at);
+
+			if ($currentDate->greaterThanOrEqualTo($expireDate)) {
+				return 0;
+			}
+
 			return ($couponDetails->discount / 100) * $subtotal;
 		}
 
 		return 0;
 	}
+
+
 	private function calculateShipping($shipping_address)
 	{
 		if (str_contains(strtolower($shipping_address['division']), 'dhaka')) {

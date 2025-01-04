@@ -17,6 +17,7 @@ class Category extends Model
         $this->attributes["slug"] = Str::slug($value);
     }
 
+    
     function subcategory()
     {
         return $this->hasMany(Category::class, "parent_id")->with("subcategory");

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -31,7 +32,7 @@ class Product extends Model
         'size' => 'array',
     ];
     protected $appends = ['discount_price'];
-
+    public $timestamps = false;
     public function setNameAttribute($value)
     {
         $this->attributes['name'] = $value;
@@ -51,35 +52,33 @@ class Product extends Model
         return [];
     }
 
-    public function getDiscountPriceAttribute()
+    public function getDiscountAttribute()
     {
-        $totalDiscount = 0;
-        $discount = Discount::where('is_active', 1)
-            ->where(function ($query) {
-                $query->where(function ($q) {
-                    $q->where('type', 'single')->where('product_id', $this->id);
+        $currentDate = Carbon::now()->startOfMinute();
+        $currentDate->setTimezone('UTC');
+
+        $discount = Discount::where(function ($query) {
+            $query->where('type', 'single')->where('product_id', $this->id)
+                ->orWhere(function ($q) {
+                    $q->where('type', 'category')->where('category_id', $this->category_id);
                 })
-                    ->orWhere(function ($q) {
-                        $q->where('type', 'category')->where('category_id', $this->category_id);
-                    })
-                    ->orWhere('type', 'global');
-            })
+                ->orWhere('type', 'global');
+        })
+            ->where('start_date', '<=', $currentDate)
+            ->where('end_date', '>=', $currentDate)
             ->orderByDesc('discount_percentage')
             ->first();
 
-        if ($discount) {
-            $totalDiscount += $discount->discount_percentage;
-        }
+        $existingDiscount = $this->attributes['discount'] ?? 0;
 
-        if ($this->discount) {
-            $totalDiscount += $this->discount;
-        }
+        return $discount ? $existingDiscount + $discount->discount_percentage : $existingDiscount;
+    }
 
-        if ($totalDiscount > 0) {
-            return round($this->price * (1 - ($totalDiscount / 100)), 2);
-        }
 
-        return $this->price;
+    public function getDiscountPriceAttribute()
+    {
+        $discountPercentage = 0;
+        return round($this->price * (1 - ($discountPercentage / 100)), 2);
     }
 
 
@@ -87,7 +86,6 @@ class Product extends Model
     {
         return url('storage/' . $value);
     }
-
 
     public function category()
     {

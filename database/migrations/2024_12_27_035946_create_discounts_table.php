@@ -17,7 +17,6 @@ return new class extends Migration
             $table->unsignedBigInteger('product_id')->nullable()->index();
             $table->unsignedBigInteger('category_id')->nullable()->index();
             $table->decimal('discount_percentage', 5, 2);
-            $table->boolean('is_active')->default(true);
             $table->dateTime('start_date')->nullable();
             $table->dateTime('end_date')->nullable();
             $table->timestamps();

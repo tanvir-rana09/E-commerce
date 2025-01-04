@@ -26,7 +26,7 @@ class OrderController extends Controller
 			$validator = Validator::make($request->all(), [
 				'user_id' => 'required|exists:users,id',
 				'products' => 'required|array|min:1',
-				'size' => 'sometimes|string',
+				'size' => 'sometimes|array',
 				'products.*.product_id' => 'required|exists:products,id',
 				'products.*.quantity' => 'required|integer|min:1',
 				'products.*.price' => 'required|integer|min:0',
@@ -39,10 +39,10 @@ class OrderController extends Controller
 				'shipping_address.division' => 'required|string|max:100',
 				'shipping_address.postal_code' => 'required|string|max:10',
 				'payment_method' => 'required|string|in:bkash,rocket,nagad,cash_on_delivery',
-				'payment_number' => 'string|max:20',
+				'payment_number' => 'string|max:13',
 				'trx_id' => 'string|max:50',
 				'payment_status' => 'required|string|in:pending,successful,failed',
-				'coupon_code' => 'nullable|string|max:20',
+				'coupon_code' => 'nullable|string|max:25',
 				'order_notes' => 'nullable|string|max:500',
 			]);
 
@@ -177,6 +177,9 @@ class OrderController extends Controller
 		}
 		if (!empty($query['start_date']) && !empty($query['end_date'])) {
 			$orders->whereBetween('created_at', [$query['start_date'], $query['end_date']]);
+		}
+		if (!empty($query['user_id'])) {
+			$orders->where('user_id', $query['user_id']);
 		}
 		if (!empty($query['user_id'])) {
 			$orders->where('user_id', $query['user_id']);

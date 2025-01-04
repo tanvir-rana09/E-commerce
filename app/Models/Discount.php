@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Discount extends Model
@@ -11,12 +12,10 @@ class Discount extends Model
         'product_id',
         'category_id',
         'discount_percentage',
-        'is_active',
         'start_date',
         'end_date',
     ];
-
-   
+    protected $appends = ['formatted_start_date', 'formatted_end_date'];
     public function product()
     {
         return $this->belongsTo(Product::class);
@@ -25,5 +24,14 @@ class Discount extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+    public function getFormattedStartDateAttribute()
+    {
+        return Carbon::parse($this->start_date)->format('F j, Y');
+    }
+
+    public function getFormattedEndDateAttribute()
+    {
+        return Carbon::parse($this->end_date)->format('F j, Y');
     }
 }

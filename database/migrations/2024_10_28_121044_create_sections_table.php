@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('sections', function (Blueprint $table) {
             $table->id();
-            $table->string("name")->unique();
-            $table->string("title")->unique();
+            $table->string("name");
+            $table->string("title")->unique()->nullable();
             $table->text("file")->nullable();
             $table->enum('type', ['image', 'video', 'mixed'])->default('image');
             $table->text('description')->nullable();

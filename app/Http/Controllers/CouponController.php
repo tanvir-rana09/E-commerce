@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coupon;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CouponController extends Controller
@@ -10,8 +11,9 @@ class CouponController extends Controller
     public function createCoupon(Request $request)
     {
         $this->validateCoupon($request);
-
-        $coupon = Coupon::create($request->only('code', 'discount', 'expires_at', 'usage_limit'));
+        $data = $request->only('code', 'discount', 'expires_at', 'usage_limit');
+        $data['expires_at'] = Carbon::parse($data['expires_at'])->endOfDay()->format('Y-m-d H:i:s');
+        $coupon = Coupon::create($data);
 
         return response()->json([
             'message' => 'Coupon created successfully',
@@ -20,20 +22,18 @@ class CouponController extends Controller
         ], 201);
     }
 
-   
+
     public function getCoupons(Request $request)
     {
         $search = $request->query('search');
-
-        
         $couponQuery = Coupon::query()
-           ->when($search, function ($query) use ($search) {
+            ->when($search, function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('name', 'LIKE', "%$search%");});
-            })
-            ->orderBy('created_at', 'desc');
+                    $subQuery->where('code', 'LIKE', "%$search%");
+                });
+            })->orderBy('created_at', 'desc');
 
-       
+
         $perPage = $request->query('per_page', 10);
         $coupons = $couponQuery->paginate($perPage);
 
@@ -55,25 +55,33 @@ class CouponController extends Controller
         ], 200);
     }
 
-    
+
     public function applyCoupon(Request $request)
     {
         $validated = $request->validate([
             'code' => 'required|string|exists:coupons,code',
         ]);
 
-        $coupon = Coupon::validCoupon($validated['code']);
+        $coupon = Coupon::where('code', $validated['code'])->first();
 
-        // Check if coupon has usage limit and has been used up
         if ($coupon->usage_limit > 0 && $coupon->times_used >= $coupon->usage_limit) {
             return response()->json([
                 'message' => 'Coupon usage limit reached.',
                 'status' => 400
             ], 200);
         }
+        $currentDate = now();
+        $expireDate = Carbon::parse($coupon->expires_at); 
+    
+        // Check if the coupon has expired
+        if ($currentDate->greaterThanOrEqualTo($expireDate)) {
+            return response()->json([
+                'message' => 'Coupon Expired',
+                'status' => 400
+            ], 200);
+        }
 
-        // Apply the discount
-        $coupon->increment('times_used'); // Increase usage count
+        $coupon->increment('times_used'); 
         $coupon->save();
 
         return response()->json([
@@ -94,14 +102,14 @@ class CouponController extends Controller
         ]);
     }
 
-   
+
     private function validateCoupon(Request $request)
     {
         $request->validate([
             'code' => 'required|string|unique:coupons,code',
-            'discount' => 'required|numeric|min:0|max:100',
-            'expires_at' => 'required|date|after:now',
-            'usage_limit' => 'nullable|integer|min:1',
+            'discount' => 'required|numeric|min:1|max:99',
+            'expires_at' => 'required|date',
+            'usage_limit' => 'required|integer|min:1',
         ]);
     }
 }
