@@ -23,6 +23,7 @@ Route::get('/site-settings', [SiteSettingController::class, 'getAllSettings']);
 Route::get("/category", [CategoryController::class, "getAllCategories"]);
 Route::get('/category/ids-names', [CategoryController::class, 'getCategoryIdsAndNames']);
 Route::get("/section", [SectionController::class, "getAllSections"]);
+Route::get('/product/ids-names', [ProductController::class, 'getProductIdsAndNames']);
 
 Route::middleware(["auth:api"])->prefix("auth")->group(function () {
     Route::get("/profile", [UserController::class, "profile"]);
@@ -39,7 +40,6 @@ Route::middleware(["auth:api"])->prefix("users")->group(function () {
 
 
 Route::middleware(["auth:api"])->prefix("product")->group(function () {
-    Route::get('/ids-names', [ProductController::class, 'getProductIdsAndNames']);
     Route::get("/", [ProductController::class, "getAllProducts"]);
     Route::get("/comments/{id}", [ProductController::class, "productComments"]);
     Route::post("/add", [ProductController::class, "addProduct"])->middleware(['checkUserRole:moderator,reader,admin']);

@@ -77,7 +77,7 @@ class Product extends Model
 
     public function getDiscountPriceAttribute()
     {
-        $discountPercentage = 0;
+        $discountPercentage = $this->discount;
         return round($this->price * (1 - ($discountPercentage / 100)), 2);
     }
 

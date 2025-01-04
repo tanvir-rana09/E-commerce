@@ -49,7 +49,7 @@ class SectionController extends Controller
     {
         $query = $request->query();
         $sectionsQuery = Section::query();
-
+    
         // Apply filtering
         if (!empty($query['title'])) {
             $sectionsQuery->where('title', 'like', "%{$query['title']}%");
@@ -60,29 +60,49 @@ class SectionController extends Controller
         if (!empty($query['id'])) {
             $sectionsQuery->where('id', $query['id']);
         }
-
-        // Pagination parameters
-        $page = (int) ($query['page'] ?? 1);
-        $perPage = (int) ($query['per_page'] ?? 10);
-
-        $paginatedSections = $sectionsQuery->paginate($perPage, ['*'], 'page', $page);
-
-        if ($paginatedSections->isEmpty()) {
+    
+        // Check for pagination parameters
+        $page = $query['page'] ?? null;
+        $perPage = $query['per_page'] ?? null;
+    
+        if ($page && $perPage) {
+            // Apply pagination
+            $paginatedSections = $sectionsQuery->paginate((int) $perPage, ['*'], 'page', (int) $page);
+    
+            if ($paginatedSections->isEmpty()) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'No sections found',
+                ], 404);
+            }
+    
             return response()->json([
-                'status' => 'failed',
-                'message' => 'No sections found',
-            ], 404);
+                'status' => 200,
+                'total' => $paginatedSections->total(),
+                'current_page' => $paginatedSections->currentPage(),
+                'per_page' => $paginatedSections->perPage(),
+                'total_pages' => $paginatedSections->lastPage(),
+                'data' => $paginatedSections->items(),
+            ], 200);
+        } else {
+            // Return all data without pagination
+            $sections = $sectionsQuery->get();
+    
+            if ($sections->isEmpty()) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'No sections found',
+                ], 404);
+            }
+    
+            return response()->json([
+                'status' => 200,
+                'total' => $sections->count(),
+                'data' => $sections,
+            ], 200);
         }
-
-        return response()->json([
-            'status' => 200,
-            'total' => $paginatedSections->total(),
-            'current_page' => $paginatedSections->currentPage(),
-            'per_page' => $paginatedSections->perPage(),
-            'total_pages' => $paginatedSections->lastPage(),
-            'data' => $paginatedSections->items(),
-        ], 200);
     }
+    
 
     /**
      * Update a specific section by ID.

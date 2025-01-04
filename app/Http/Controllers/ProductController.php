@@ -133,8 +133,11 @@ class ProductController extends Controller
                 case 'latest':
                     $products->orderBy('created_at', 'asc');
                     break;
-                case 'rating':
-                    $products->orderBy('rating', 'desc'); // Sort by rating first
+                case 'newest':
+                    $products->orderBy('created_at', 'desc');
+                    break;
+                case 'sells':
+                    $products->orderBy('sells', 'desc');
                     break;
             }
         } else {
@@ -306,16 +309,31 @@ class ProductController extends Controller
     public function getProductIdsAndNames(Request $request)
     {
         $status = $request->query('status');
-        $products = Product::select('id', 'name', 'banner', 'discount', 'images')
+        $orderByCreatedAt = $request->query('order_by_created_at', false); 
+        $orderBySells = $request->query('order_by_sells', false);         
+        $limit = $request->query('limit');
+    
+        $products = Product::select('id', 'name', 'banner', 'discount', 'images', 'price')
             ->when($status, function ($query) use ($status) {
                 $query->where('status', $status);
             })
-            ->orderBy('name', 'asc')
+            ->when($orderByCreatedAt, function ($query) {
+                $query->orderBy('created_at', 'desc');
+            })
+            ->when($orderBySells, function ($query) {
+                $query->orderBy('sells', 'desc');
+            })
+            ->orderBy('name', 'asc') // Default sorting by name
+            ->when($limit, function ($query) use ($limit) {
+                $query->limit($limit); // Apply limit only if provided
+            })
             ->get();
-
+    
         return response()->json([
             'data' => $products,
             'status' => 200
         ]);
     }
+    
+
 }

@@ -28,7 +28,7 @@ class SiteSettingController extends Controller
             'facebook' => 'nullable|url',
             'twitter' => 'nullable|url',
             'instagram' => 'nullable|url',
-            'whatsapp' => 'nullable|url',
+            'whatsapp' => 'nullable|numeric',
             'linkedin' => 'nullable|url',
         ];
 
