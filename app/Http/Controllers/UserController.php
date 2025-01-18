@@ -53,20 +53,41 @@ class UserController extends Controller
         return ApiResponse::sendResponse('failed', 'Failed to create user', 200);
     }
 
-    function login(Request $request)
+    public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
-        $token = JWTAuth::attempt($credentials);
-        if (!$token) {
-            return response()->json(['error' => 'Invalid credentials!', 'status' => 401], 200);
+        try {
+            // Validate the request input
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required|string|min:6',
+            ]);
+    
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+    
+            $credentials = $request->only('email', 'password');
+    
+            // Attempt to authenticate the user and get the token
+            if (!$token = JWTAuth::attempt($credentials)) {
+                return response()->json(['error' => 'Invalid credentials!', 'status' => 401], 401);
+            }
+    
+            // Retrieve the authenticated user
+            $user = JWTAuth::user();
+    
+            $user->update(['token' => $token]);
+    
+            return response()->json([
+                'token' => $token,
+                'user' => $user,
+                'status' => 200,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Login failed', 'message' => $e->getMessage()], 500);
         }
-
-        JWTAuth::setToken($token)->authenticate();
-        $user = JWTAuth::user();
-        $user->update(['token' => $token]);
-
-        return response()->json(['token' => $token, 'user' => $user, 'status' => 200,], 200);
     }
+    
 
     function profile()
     {

@@ -3,6 +3,7 @@
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ContentController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\OrderController;
@@ -24,7 +25,8 @@ Route::get("/category", [CategoryController::class, "getAllCategories"]);
 Route::get('/category/ids-names', [CategoryController::class, 'getCategoryIdsAndNames']);
 Route::get("/section", [SectionController::class, "getAllSections"]);
 Route::get('/product/ids-names', [ProductController::class, 'getProductIdsAndNames']);
-
+Route::get('/products', [ProductController::class, 'getAllProductIdsAndNames']);
+Route::post("/order/create", [OrderController::class, "createOrder"]);
 Route::middleware(["auth:api"])->prefix("auth")->group(function () {
     Route::get("/profile", [UserController::class, "profile"]);
     Route::get("/logout", [UserController::class, "logout"]);
@@ -40,7 +42,7 @@ Route::middleware(["auth:api"])->prefix("users")->group(function () {
 
 
 Route::middleware(["auth:api"])->prefix("product")->group(function () {
-    Route::get("/", [ProductController::class, "getAllProducts"]);
+    Route::get("/", [ProductController::class, "getAllProducts"])->withoutMiddleware(["auth:api"]);
     Route::get("/comments/{id}", [ProductController::class, "productComments"]);
     Route::post("/add", [ProductController::class, "addProduct"])->middleware(['checkUserRole:moderator,reader,admin']);
     Route::put("/update/{id}", [ProductController::class, "updateProduct"])->middleware(['checkUserRole:moderator,reader,admin']);
@@ -83,9 +85,8 @@ Route::middleware(["auth:api","checkUserRole:moderator,reader,admin"])->prefix("
 Route::middleware(["auth:api"])->prefix("order")->group(function () {
     Route::get("/product/{id?}", [OrderController::class, "orderedItems"]);
     Route::get("/{id?}", [OrderController::class, "userOrders"]);
-    Route::post("/create", [OrderController::class, "createOrder"]);
     Route::put("/cancel/{id}", [OrderController::class, "cancelOrder"]);
-    Route::put("/item/cancel/{id}", [OrderItemsController::class, "cancelOrderItem"]);
+    Route::put("/item/cancel", [OrderItemsController::class, "cancelOrderItem"]);
     Route::get("/order-items/{id}", [OrderItemsController::class, "OrderItems"]);
     Route::middleware(["checkUserRole:moderator,reader,admin"])->prefix('admin')->group(function () {
         Route::get("/all-orders", [OrderController::class, "Allorders"]);
@@ -113,4 +114,10 @@ Route::middleware(["auth:api"])->prefix('discounts')->group(function () {
     Route::post('/add', [DiscountController::class, 'setDiscount'])->middleware(['checkUserRole:moderator,reader,admin']);
     Route::delete('/{id}', [DiscountController::class, 'removeDiscount'])->middleware(['checkUserRole:moderator,reader,admin']);
     Route::get('/', [DiscountController::class, 'getDiscounts']);
+});
+
+
+Route::prefix('content')->group(function () {
+    Route::post('/{type}', [ContentController::class, 'upsertContent'])->middleware(["auth:api"])->middleware(['checkUserRole:moderator,reader,admin']);
+    Route::get('/{type}', [ContentController::class, 'getContent']);
 });

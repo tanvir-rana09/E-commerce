@@ -48,7 +48,7 @@ class SectionController extends Controller
     public function getAllSections(Request $request)
     {
         $query = $request->query();
-        $sectionsQuery = Section::query();
+        $sectionsQuery = Section::query()->orderBy("created_at", "desc");
     
         // Apply filtering
         if (!empty($query['title'])) {
@@ -104,12 +104,9 @@ class SectionController extends Controller
     }
     
 
-    /**
-     * Update a specific section by ID.
-     */
     public function updateSection(Request $request, $id)
     {
-        $section = Section::findOrFail($id);
+        $section = Section::find($id);
 
         $validatedData = $request->validate([
             'name' => "sometimes|string",
@@ -131,6 +128,7 @@ class SectionController extends Controller
         }
 
         $section->update($validatedData);
+        $section->save();
 
         return response()->json([
             'message' => 'Section updated successfully!',

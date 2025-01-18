@@ -9,12 +9,13 @@ class OrderService
 {
 	public function prepareOrder($request)
 	{
+		$user = auth('api')->user();
 		$subtotal = $this->calculateSubtotal($request->products);
 		$discount = $this->calculateDiscount($subtotal, $request->coupon_code);
 		$shipping = $this->calculateShipping($request->shipping_address);
 
 		return [
-			'user_id' => $request->user_id,
+			'user_id' => $user->id ?? null,
 			'products' => json_encode($request->products),
 			'subtotal' => $subtotal,
 			'discount_amount' => $discount,
@@ -43,7 +44,6 @@ class OrderService
 			$subtotal += $price * $product['quantity'];
 		}
 
-		return $subtotal;
 		return collect($products)->sum(fn($p) => $p['quantity'] * $p['price']);
 	}
 
@@ -63,7 +63,8 @@ class OrderService
 			if ($currentDate->greaterThanOrEqualTo($expireDate)) {
 				return 0;
 			}
-
+			$couponDetails->increment('times_used');
+			$couponDetails->save(); 
 			return ($couponDetails->discount / 100) * $subtotal;
 		}
 
@@ -73,9 +74,9 @@ class OrderService
 
 	private function calculateShipping($shipping_address)
 	{
-		if (str_contains(strtolower($shipping_address['division']), 'dhaka')) {
+		if ($shipping_address['inside_dhaka'] == true) {
 			# code...
-			return 50;
-		} else return 100;
+			return 100;
+		} else return 50;
 	}
 }

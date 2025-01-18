@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -12,6 +13,7 @@ class User extends Authenticatable implements JWTSubject
     use HasFactory;
     protected $fillable = ["name", "email", "password", "token","profile"];
     protected $hidden = ["password",];
+    protected $appends = ['formatted_created_at'];
     public function getJWTIdentifier()
     {
         return $this->getKey();
@@ -31,4 +33,8 @@ class User extends Authenticatable implements JWTSubject
         return url('storage/' . $value);
     }
     
+    public function getFormattedCreatedAtAttribute()
+    {
+        return Carbon::parse($this->attributes['created_at'])->format('F j, Y');
+    }
 }

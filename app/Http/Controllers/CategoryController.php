@@ -15,7 +15,7 @@ class CategoryController extends Controller
     {
         try {
             $validated = $request->validate([
-                "name" => "string|required",
+                "name" => "string|required|unique:categories,name",
                 "status" => "string|nullable",
                 "parent_id" => "exists:categories,id|numeric",
                 'file' => 'required|image',
@@ -56,7 +56,7 @@ class CategoryController extends Controller
         $query = $request->query();
 
         $categories = Category::with("subcategory")
-            ->whereNull("parent_id");
+            ->whereNull("parent_id")->orderBy("created_at", "desc");
 
         if (!empty($query['name'])) {
             $categories->where("name", "like", "%" . $query['name'] . "%");
@@ -146,43 +146,63 @@ class CategoryController extends Controller
     }
 
     function deleteCategory($id)
-    {
+{
+    $category = Category::find($id);
 
-        $category = Category::find($id);
-
-        if (!$category) {
-            return response()->json([
-                "status" => "error",
-                "message" => "category not found"
-            ], 404);
-        }
-
-        if (!empty($section->file)) {
-            $image = $category->file;
-            $baseUrl = url('storage/') . '/';
-            $replaceFile = str_replace($baseUrl, '', $image);
-            Storage::disk('public')->delete($replaceFile);
-        }
-
-        $category->delete();
-
+    if (!$category) {
         return response()->json([
-            "status" => "success",
-            "message" => "category deleted successfully"
-        ], 200);
+            "status" => "error",
+            "message" => "Category not found"
+        ], 404);
     }
+
+    // Delete the category's file if it exists
+    if (!empty($category->file)) {
+        $this->deleteFile($category->file);
+    }
+
+    // Get all subcategories of this category
+    $subcategories = $category->subcategory;
+
+    if (!empty($subcategories)) {
+        foreach ($subcategories as $subcategory) {
+            // Delete subcategory files
+            if (!empty($subcategory->file)) {
+                $this->deleteFile($subcategory->file);
+            }
+            // Optionally delete sub-subcategories recursively if needed
+            $this->deleteSubcategoriesRecursively($subcategory);
+        }
+    }
+
+    // Delete the category
+    $category->delete();
+
+    return response()->json([
+        "status" => "success",
+        "message" => "Category and its subcategories deleted successfully"
+    ], 200);
+}
 
     public function getCategoryIdsAndNames(Request $request)
     {
 
         $status = $request->query('status');
         $parentId = $request->query('parent_id');
-        $categories = Category::select('id', 'name', 'created_at','file')
+        $parents = $request->query('parents', false);
+        $childs = $request->query('childs', false);
+        $categories = Category::select('id', 'name', 'created_at', 'file', 'slug', 'parent_id')
             ->when($status, function ($query) use ($status) {
                 $query->where('status', $status);
             })
             ->when($parentId, function ($query) use ($parentId) {
-                $query->find($parentId);
+                $query->where('parent_id', $parentId);
+            })
+            ->when($parents, function ($query) {
+                $query->whereNull('parent_id');
+            })
+            ->when($childs, function ($query) {
+                $query->whereNotNull('parent_id');
             })
             ->orderBy('name', 'asc')
             ->get();
@@ -192,4 +212,26 @@ class CategoryController extends Controller
             'status' => 200
         ]);
     }
+
+    private function deleteFile($filePath)
+{
+    $baseUrl = url('storage/') . '/';
+    $replaceFile = str_replace($baseUrl, '', $filePath);
+    Storage::disk('public')->delete($replaceFile);
+}
+
+/**
+ * Recursively delete subcategories and their files.
+ */
+private function deleteSubcategoriesRecursively($category)
+{
+    foreach ($category->subcategory as $subcategory) {
+        if (!empty($subcategory->file)) {
+            $this->deleteFile($subcategory->file);
+        }
+        // Recursive call for nested subcategories
+        $this->deleteSubcategoriesRecursively($subcategory);
+        $subcategory->delete();
+    }
+}
 }

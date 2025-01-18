@@ -81,12 +81,9 @@ class CouponController extends Controller
             ], 200);
         }
 
-        $coupon->increment('times_used'); 
-        $coupon->save();
-
         return response()->json([
             'message' => 'Coupon applied successfully',
-            'discount_percentage' => $coupon,
+            'discount' => $coupon,
             'status' => 200
         ]);
     }

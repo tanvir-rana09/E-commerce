@@ -24,19 +24,18 @@ class OrderController extends Controller
 	{
 		try {
 			$validator = Validator::make($request->all(), [
-				'user_id' => 'required|exists:users,id',
 				'products' => 'required|array|min:1',
 				'size' => 'sometimes|array',
 				'products.*.product_id' => 'required|exists:products,id',
 				'products.*.quantity' => 'required|integer|min:1',
-				'products.*.price' => 'required|integer|min:0',
+				'products.*.price' => 'required|numeric|min:0',
 				'shipping_address' => 'required|array',
 				'shipping_address.address' => 'required|string|max:255',
 				'shipping_address.name' => 'required|string|max:255',
 				'shipping_address.email' => 'required|email|max:255',
 				'shipping_address.phone' => 'required|string|max:255',
 				'shipping_address.city' => 'required|string|max:100',
-				'shipping_address.division' => 'required|string|max:100',
+				'shipping_address.inside_dhaka' => 'required|max:100',
 				'shipping_address.postal_code' => 'required|string|max:10',
 				'payment_method' => 'required|string|in:bkash,rocket,nagad,cash_on_delivery',
 				'payment_number' => 'string|max:13',
@@ -54,6 +53,7 @@ class OrderController extends Controller
 
 			$orderData = $this->orderService->prepareOrder($request);
 			$order = Order::create($orderData);
+
 
 			foreach ($order->products as $product) {
 				$productModel = Product::find($product['product_id']);
@@ -79,7 +79,7 @@ class OrderController extends Controller
 
 			DB::commit();
 
-			return response()->json(["status" => "success", "data" => $order], 201);
+			return response()->json(["status" => 201, "data" => $order], 201);
 		} catch (\Exception $e) {
 			DB::rollBack();
 
@@ -113,8 +113,10 @@ class OrderController extends Controller
 			$user = Auth::user();
 			if ($id) {
 				$order = Order::with(['orderItems' => function ($query) {
-					$query->select(['id', 'order_id', 'product_id', 'price', 'quantity'])->with('product');
-				}])->where('user_id', $user->id)->where('id', $id)->first();
+					$query->select(['id', 'product_id', 'order_id','created_at','status','quantity','size','price'])->with(['product'=> function ($query) {
+						$query->select(['id', 'name', 'discount_price','name','']);
+					}]);
+				}])->select('coupon_code','delivery_status','payment_status','status','order_notes','')->where('user_id', $user->id)->where('id', $id)->first();
 
 				if (!$order) {
 					return response()->json(['message' => 'Order not found '], 404);

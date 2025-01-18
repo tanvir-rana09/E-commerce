@@ -31,9 +31,11 @@ class OrderItemsController extends Controller
         ], 200);
     }
 
-    public function cancelOrderItem(Request $request, $id)
+    public function cancelOrderItem(Request $request)
     {
-        $orderItem = OrderItems::find($id);
+        $orderId = $request->query('order_id');
+        $productId = $request->query('product_id');
+        $orderItem = OrderItems::where('order_id', $orderId)->where('product_id', $productId)->first();
         if (!$orderItem) {
             return response()->json([
                 "status" => "failed",
@@ -56,13 +58,14 @@ class OrderItemsController extends Controller
             return response()->json([
                 "status" => "failed",
                 "status" => 400,
-                "message" => "Delivered items cannot be ".$request->status
+                "message" => "Delivered items cannot be " . $request->status
             ], 200);
         }
 
         $orderItem->status = $request->status;
         $orderItem->save();
         $product = Product::find($orderItem['product_id']);
+        
         if ($request->status == 'canceled') {
             $product->increment('stock', $product['quantity']);
         }

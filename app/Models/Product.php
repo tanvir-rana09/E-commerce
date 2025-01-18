@@ -32,7 +32,7 @@ class Product extends Model
         'size' => 'array',
     ];
     protected $appends = ['discount_price'];
-    public $timestamps = false;
+
     public function setNameAttribute($value)
     {
         $this->attributes['name'] = $value;
@@ -71,7 +71,7 @@ class Product extends Model
 
         $existingDiscount = $this->attributes['discount'] ?? 0;
 
-        return $discount ? $existingDiscount + $discount->discount_percentage : $existingDiscount;
+        return $discount ? $discount->discount_percentage : $existingDiscount;
     }
 
 
